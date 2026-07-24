@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "unipkainfer"
+version = "0.1.0"
+description = "Standalone CPU and GPU inference runtime for Uni-pKa"
+readme = "README.md"
+requires-python = ">=3.10,<3.14"
+license = { file = "unipkainfer/LICENSE" }
+authors = [
+    { name = "Bind Research" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "huggingface-hub>=0.27,<2",
+    "lmdb>=1.4,<3",
+    "numpy>=1.26,<3",
+    "pandas>=2.1,<3",
+    "platformdirs>=4,<5",
+    "rdkit>=2024.03.1",
+    "scipy>=1.11,<2",
+    "torch>=2.2,<3",
+    "tqdm>=4.66,<5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7,<9",
+    "ruff>=0.4,<1",
+]
+
+[project.scripts]
+unipka-download-model = "unipkainfer.download_model:main"
+
+[tool.setuptools.packages.find]
+include = ["unipkainfer*"]
+
+[tool.setuptools.package-data]
+"unipkainfer" = ["LICENSE"]
+"unipkainfer.unicoreinfer" = ["UPSTREAM.md", "version.txt"]
+"unipkainfer.unimol" = ["examples/*.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 127
+
+[tool.ruff.lint]
+select = ["E", "F"]
