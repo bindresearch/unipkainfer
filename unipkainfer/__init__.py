@@ -1,6 +1,5 @@
-"""Standalone Uni-pKa inference and model-management API."""
+"""Standalone Uni-pKa inference API."""
 
-from .download_model import download_unipka_model
 from .paths import default_model_dir
 from .pka_predictor import (
     PredictionConfig,
@@ -15,7 +14,6 @@ __all__ = [
     "PredictionConfig",
     "UnipkaFreeEnergyConfig",
     "default_model_dir",
-    "download_unipka_model",
     "predict_pkas",
     "predict_pkas_from_smiles",
     "predict_standard_free_energy",

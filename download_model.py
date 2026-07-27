@@ -6,7 +6,7 @@ import argparse
 from collections.abc import Sequence
 from pathlib import Path
 
-from .paths import default_model_dir
+from unipkainfer.paths import default_model_dir
 
 
 UNIPKA_REPO_ID = "bindresearch/pkasso_unipka"

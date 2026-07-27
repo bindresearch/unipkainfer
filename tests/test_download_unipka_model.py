@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from unipkainfer import download_model as downloader
+import download_model as downloader
 from unipkainfer.pka_predictor.api import _missing_checkpoint_message
 
 

@@ -44,7 +44,10 @@ dev = [
 ]
 
 [project.scripts]
-unipka-download-model = "unipkainfer.download_model:main"
+unipka-download-model = "download_model:main"
+
+[tool.setuptools]
+py-modules = ["download_model"]
 
 [tool.setuptools.packages.find]
 include = ["unipkainfer*"]
