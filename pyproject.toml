@@ -9,8 +9,9 @@ description = "Standalone CPU and GPU inference runtime for Uni-pKa"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 license = { file = "unipkainfer/LICENSE" }
-authors = [
+maintainers = [
     { name = "Bind Research" },
+    { name = "Soeren von Buelow", email = "soeren.buelow@bindresearch.org" },
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
