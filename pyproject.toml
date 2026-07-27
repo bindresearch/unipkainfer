@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,14 @@ version = "0.1.0"
 description = "Standalone CPU and GPU inference runtime for Uni-pKa"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
-license = { file = "LICENSE" }
+license = "Apache-2.0 AND MIT"
+license-files = [
+    "LICENSE",
+    "LICENSE_MIT",
+    "THIRD_PARTY_NOTICES.md",
+    "unipkainfer/unicoreinfer/LICENSE",
+    "unipkainfer/unicoreinfer/UPSTREAM.md",
+]
 maintainers = [
     { name = "Bind Research" },
     { name = "Soeren von Buelow", email = "soeren.buelow@bindresearch.org" },
@@ -16,7 +23,6 @@ maintainers = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache-2.0 AND MIT License",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -54,8 +60,7 @@ py-modules = ["download_model"]
 include = ["unipkainfer*"]
 
 [tool.setuptools.package-data]
-"unipkainfer" = ["LICENSE"]
-"unipkainfer.unicoreinfer" = ["UPSTREAM.md", "version.txt"]
+"unipkainfer.unicoreinfer" = ["LICENSE", "UPSTREAM.md", "version.txt"]
 "unipkainfer.unimol" = ["examples/*.txt"]
 
 [tool.pytest.ini_options]
