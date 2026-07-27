@@ -40,8 +40,7 @@ class TTADataset(BaseWrapperDataset):
             "coordinates": coordinates.astype(np.float32),
             "charges": charges.astype(str),
             "target": target,
-            "smi":smi,
-            "target": target,
+            "smi": smi,
             "id": id,
         }
 
@@ -98,6 +97,6 @@ class TTAPKADataset(BaseWrapperDataset):
             "target": target,
             "id": id,
         }
-    
+
     def __getitem__(self, index: int):
         return self.__cached_item__(index, self.epoch)

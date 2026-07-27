@@ -26,12 +26,14 @@ class ConformerSamplePKADataset(BaseWrapperDataset):
     def __cached_item__(self, index: int, epoch: int):
         atoms = np.array(self.dataset[index][self.atoms])
         charges = np.array(self.dataset[index][self.charges])
-        assert len(atoms) > 0, 'atoms: {}, charges: {}, coordinates: {}, id: {}'.format(atoms, charges, coordinates, id)
+        assert len(atoms) > 0, "atoms: {}, charges: {}, coordinates: {}, id: {}".format(
+            atoms, charges, self.coordinates, self.id
+        )
         size = len(self.dataset[index][self.coordinates])
         with data_utils.numpy_seed(self.seed, epoch, index):
             sample_idx = np.random.randint(size)
         coordinates = self.dataset[index][self.coordinates][sample_idx]
-        return {"atoms": atoms, "coordinates": coordinates.astype(np.float32),"charges":charges,"id": self.id}
+        return {"atoms": atoms, "coordinates": coordinates.astype(np.float32), "charges": charges, "id": self.id}
 
     def __getitem__(self, index: int):
         return self.__cached_item__(index, self.epoch)

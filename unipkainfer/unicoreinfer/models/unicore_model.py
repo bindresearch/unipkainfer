@@ -9,7 +9,6 @@ Base classes for various unicoreinfer models.
 
 import logging
 
-import torch
 import torch.nn as nn
 
 logger = logging.getLogger(__name__)
@@ -39,12 +38,12 @@ class BaseUnicoreModel(nn.Module):
         self,
         state_dict,
         strict=True,
-        model_args = None,
+        model_args=None,
     ):
         """Copies parameters and buffers from *state_dict* into this module and
         its descendants.
 
-        Overrides the method in :class:`nn.Module`. 
+        Overrides the method in :class:`nn.Module`.
         """
         return super().load_state_dict(state_dict, strict)
 

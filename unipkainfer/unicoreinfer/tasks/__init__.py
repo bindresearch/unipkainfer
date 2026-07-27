@@ -45,15 +45,9 @@ def register_task(name):
         if name in TASK_REGISTRY:
             raise ValueError("Cannot register duplicate task ({})".format(name))
         if not issubclass(cls, UnicoreTask):
-            raise ValueError(
-                "Task ({}: {}) must extend UnicoreTask".format(name, cls.__name__)
-            )
+            raise ValueError("Task ({}: {}) must extend UnicoreTask".format(name, cls.__name__))
         if cls.__name__ in TASK_CLASS_NAMES:
-            raise ValueError(
-                "Cannot register task with duplicate class name ({})".format(
-                    cls.__name__
-                )
-            )
+            raise ValueError("Cannot register task with duplicate class name ({})".format(cls.__name__))
         TASK_REGISTRY[name] = cls
         TASK_CLASS_NAMES.add(cls.__name__)
         return cls
@@ -65,11 +59,7 @@ def register_task(name):
 tasks_dir = os.path.dirname(__file__)
 for file in os.listdir(tasks_dir):
     path = os.path.join(tasks_dir, file)
-    if (
-        not file.startswith("_")
-        and not file.startswith(".")
-        and (file.endswith(".py") or os.path.isdir(path))
-    ):
+    if not file.startswith("_") and not file.startswith(".") and (file.endswith(".py") or os.path.isdir(path)):
         task_name = file[: file.find(".py")] if file.endswith(".py") else file
         module = importlib.import_module(f"{__name__}.{task_name}")
 

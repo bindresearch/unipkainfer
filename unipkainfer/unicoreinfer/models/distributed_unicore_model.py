@@ -6,16 +6,14 @@
 
 import logging
 
-import torch
 import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel
 
-from ..distributed import (
-    ModuleProxyWrapper, LegacyDistributedDataParallel
-)
+from ..distributed import ModuleProxyWrapper, LegacyDistributedDataParallel
 
 
 logger = logging.getLogger(__name__)
+
 
 def DistributedUnicoreModel(args, model, process_group, device):
     """
@@ -46,17 +44,16 @@ def DistributedUnicoreModel(args, model, process_group, device):
         )
         # forward missing getattr and state_dict/load_state_dict to orig model
         wrapped_model = ModuleProxyWrapper(wrapped_model)
-    elif args.ddp_backend in {'apex'}:
+    elif args.ddp_backend in {"apex"}:
         import apex
-        wrapped_model = apex.parallel.DistributedDataParallel(
-            module=model.to(device)
-        )
+
+        wrapped_model = apex.parallel.DistributedDataParallel(module=model.to(device))
         # forward missing getattr and state_dict/load_state_dict to orig model
         wrapped_model = ModuleProxyWrapper(wrapped_model)
     elif args.ddp_backend in {"no_c10d", "legacy_ddp"}:
         wrapped_model = LegacyDistributedDataParallel(
             module=model.to(device),
-            buffer_size=2 ** 28,
+            buffer_size=2**28,
             process_group=process_group,
         )
         # forward missing getattr and state_dict/load_state_dict to orig model

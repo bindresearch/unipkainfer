@@ -5,10 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 import math
-import torch
 import torch.nn.functional as F
 from .. import metrics
 from ..losses import UnicoreLoss, register_loss
+
 
 @register_loss("cross_entropy")
 class CrossEntropyLoss(UnicoreLoss):
@@ -36,7 +36,7 @@ class CrossEntropyLoss(UnicoreLoss):
     def compute_loss(self, model, net_output, sample, reduce=True):
         lprobs = F.log_softmax(net_output.float(), dim=-1)
         lprobs = lprobs.view(-1, lprobs.size(-1))
-        target = sample['target'].view(-1)
+        target = sample["target"].view(-1)
         loss = F.nll_loss(
             lprobs,
             target,
@@ -45,15 +45,13 @@ class CrossEntropyLoss(UnicoreLoss):
         return loss
 
     @staticmethod
-    def reduce_metrics(logging_outputs, split='valid') -> None:
+    def reduce_metrics(logging_outputs, split="valid") -> None:
         """Aggregate logging outputs from data parallel training."""
         loss_sum = sum(log.get("loss", 0) for log in logging_outputs)
         sample_size = sum(log.get("sample_size", 0) for log in logging_outputs)
 
         # we divide by log(2) to convert the loss from base e to base 2
-        metrics.log_scalar(
-            "loss", loss_sum / sample_size / math.log(2), sample_size, round=3
-        )
+        metrics.log_scalar("loss", loss_sum / sample_size / math.log(2), sample_size, round=3)
 
     @staticmethod
     def logging_outputs_can_be_summed(is_train) -> bool:

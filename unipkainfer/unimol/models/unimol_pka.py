@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from ...unicoreinfer import utils
 from ...unicoreinfer.models import BaseUnicoreModel, register_model, register_model_architecture
-from ...unicoreinfer.modules import LayerNorm, init_bert_params
+from ...unicoreinfer.modules import LayerNorm
 from .unimol import UniMolModel, ClassificationHead, NonLinearHead
 
 logger = logging.getLogger(__name__)
@@ -82,13 +82,9 @@ class UniMolPKAModel(BaseUnicoreModel):
                 weight=None,
             )
         if args.masked_coord_loss > 0:
-            self.pair2coord_proj = NonLinearHead(
-                args.encoder_attention_heads, 1, args.activation_fn
-            )
+            self.pair2coord_proj = NonLinearHead(args.encoder_attention_heads, 1, args.activation_fn)
         if args.masked_dist_loss > 0:
-            self.dist_head = DistanceHead(
-                args.encoder_attention_heads, args.activation_fn
-            )
+            self.dist_head = DistanceHead(args.encoder_attention_heads, args.activation_fn)
 
     @classmethod
     def build_model(cls, args, task):
@@ -96,15 +92,21 @@ class UniMolPKAModel(BaseUnicoreModel):
         return cls(args, task.dictionary, task.charge_dictionary)
 
     def forward(
-        self,
-        input_metadata,
-        classification_head_name=None,
-        encoder_masked_tokens=None,
-        features_only=False,
-        **kwargs
+        self, input_metadata, classification_head_name=None, encoder_masked_tokens=None, features_only=False, **kwargs
     ):
         if not features_only:
-            src_tokens, src_charges, src_coord, src_distance, src_edge_type, batch, charge_targets, coord_targets, dist_targets, token_targets = input_metadata
+            (
+                src_tokens,
+                src_charges,
+                src_coord,
+                src_distance,
+                src_edge_type,
+                batch,
+                charge_targets,
+                coord_targets,
+                dist_targets,
+                token_targets,
+            ) = input_metadata
         else:
             src_tokens, src_charges, src_coord, src_distance, src_edge_type, batch = input_metadata
             charge_targets, coord_targets, dist_targets, token_targets = None, None, None, None
@@ -146,13 +148,11 @@ class UniMolPKAModel(BaseUnicoreModel):
             if self.args.masked_token_loss > 0:
                 logits = self.lm_head(encoder_rep, encoder_masked_tokens)
             if self.args.masked_charge_loss > 0:
-                charge_logits = self.charge_lm_head(encoder_rep, encoder_masked_tokens)                
+                charge_logits = self.charge_lm_head(encoder_rep, encoder_masked_tokens)
             if self.args.masked_coord_loss > 0:
                 coords_emb = src_coord
                 if padding_mask is not None:
-                    atom_num = (torch.sum(1 - padding_mask.type_as(x), dim=1) - 1).view(
-                        -1, 1, 1, 1
-                    )
+                    atom_num = (torch.sum(1 - padding_mask.type_as(x), dim=1) - 1).view(-1, 1, 1, 1)
                 else:
                     atom_num = src_coord.shape[1] - 1
                 delta_pos = coords_emb.unsqueeze(1) - coords_emb.unsqueeze(2)
@@ -167,24 +167,30 @@ class UniMolPKAModel(BaseUnicoreModel):
             cls_logits = self.unimol.classification_heads[classification_head_name](encoder_rep)
         if not features_only:
             return (
-            cls_logits, batch,
-            logits, charge_logits, encoder_distance, encoder_coord, x_norm, delta_encoder_pair_rep_norm,
-            token_targets, charge_targets, coord_targets, dist_targets
-        )
-        else: 
+                cls_logits,
+                batch,
+                logits,
+                charge_logits,
+                encoder_distance,
+                encoder_coord,
+                x_norm,
+                delta_encoder_pair_rep_norm,
+                token_targets,
+                charge_targets,
+                coord_targets,
+                dist_targets,
+            )
+        else:
             return cls_logits, batch
 
-    def register_classification_head(
-        self, name, num_classes=None, inner_dim=None, **kwargs
-    ):
+    def register_classification_head(self, name, num_classes=None, inner_dim=None, **kwargs):
         """Register a classification head."""
         if name in self.unimol.classification_heads:
             prev_num_classes = self.unimol.classification_heads[name].out_proj.out_features
             prev_inner_dim = self.unimol.classification_heads[name].dense.out_features
             if num_classes != prev_num_classes or inner_dim != prev_inner_dim:
                 logger.warning(
-                    're-registering head "{}" with num_classes {} (prev: {}) '
-                    "and inner_dim {} (prev: {})".format(
+                    're-registering head "{}" with num_classes {} (prev: {}) and inner_dim {} (prev: {})'.format(
                         name, num_classes, prev_num_classes, inner_dim, prev_inner_dim
                     )
                 )
@@ -274,7 +280,7 @@ def unimol_pka_architecture(args):
         args.masked_token_loss = getattr(args, "masked_token_loss", -1.0)
         args.masked_charge_loss = getattr(args, "masked_charge_loss", -1.0)
         args.masked_coord_loss = getattr(args, "masked_coord_loss", -1.0)
-        args.masked_dist_loss = getattr(args, "masked_dist_loss", -1.0)    
+        args.masked_dist_loss = getattr(args, "masked_dist_loss", -1.0)
         args.x_norm_loss = getattr(args, "x_norm_loss", -1.0)
         args.delta_pair_repr_norm_loss = getattr(args, "delta_pair_repr_norm_loss", -1.0)
 

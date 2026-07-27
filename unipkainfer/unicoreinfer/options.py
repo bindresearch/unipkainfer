@@ -13,9 +13,6 @@ from typing import Callable, List, Optional
 
 # this import is for backward compatibility
 from .utils import (
-    csv_str_list,
-    eval_bool,
-    eval_str_dict,
     eval_str_list,
     import_user_module,
 )  # noqa
@@ -70,9 +67,7 @@ def parse_args_and_arch(
         suppressed_parser = argparse.ArgumentParser(add_help=False, parents=[parser])
         suppressed_parser.set_defaults(**{k: None for k, v in vars(args).items()})
         args = suppressed_parser.parse_args(input_args)
-        return argparse.Namespace(
-            **{k: v for k, v in vars(args).items() if v is not None}
-        )
+        return argparse.Namespace(**{k: v for k, v in vars(args).items() if v is not None})
 
     from .models import ARCH_MODEL_REGISTRY, ARCH_CONFIG_REGISTRY, MODEL_REGISTRY
 
@@ -133,9 +128,7 @@ def parse_args_and_arch(
         args = parser.parse_args(input_args)
         extra = None
     # Post-process args.
-    if (
-        hasattr(args, "batch_size_valid") and args.batch_size_valid is None
-    ) or not hasattr(args, "batch_size_valid"):
+    if (hasattr(args, "batch_size_valid") and args.batch_size_valid is None) or not hasattr(args, "batch_size_valid"):
         args.batch_size_valid = args.batch_size
     args.bf16 = getattr(args, "bf16", False)
 
@@ -175,7 +168,9 @@ def get_parser(desc, default_task="test"):
                         help='path to save logs for tensorboard, should match --logdir '
                              'of running tensorboard (default: no tensorboard logging)')
     parser.add_argument('--wandb-project', metavar='DIR', default='',
-                        help='name of wandb project, empty for no wandb logging, for wandb login, use env WANDB_API_KEY. You can also use team_name/project_name for project name.')
+                        help='name of wandb project, empty for no wandb logging; '
+                             'for wandb login, use env WANDB_API_KEY. You can also '
+                             'use team_name/project_name for project name.')
     parser.add_argument('--wandb-name', metavar='DIR', default='',
                         help='wandb run/id name, empty for no wandb logging, for wandb login, use env WANDB_API_KEY')
     parser.add_argument('--seed', default=1, type=int, metavar='N',
@@ -184,7 +179,9 @@ def get_parser(desc, default_task="test"):
     parser.add_argument('--fp16', action='store_true', help='use FP16')
     parser.add_argument('--bf16', action='store_true', help='use BF16')
     parser.add_argument('--bf16-sr', action='store_true', help='use stachostic rounding for bf16')
-    parser.add_argument('--allreduce-fp32-grad', action='store_true', help='use fp32-grads in fp16/bf16 mode. --ddp-backend should be no_c10d')
+    parser.add_argument('--allreduce-fp32-grad', action='store_true',
+                        help='use fp32-grads in fp16/bf16 mode. '
+                             '--ddp-backend should be no_c10d')
     parser.add_argument('--fp16-no-flatten-grads', action='store_true', help="don't flatten FP16 grads tensor")
     parser.add_argument('--fp16-init-scale', default=2 ** 7, type=int,
                         help='default FP16 loss scale')
@@ -202,12 +199,13 @@ def get_parser(desc, default_task="test"):
                         help='how often to clear the PyTorch CUDA cache (0 to disable)')
     parser.add_argument('--all-gather-list-size', default=16384, type=int,
                         help='number of bytes reserved for gathering stats from workers')
-    parser.add_argument('--suppress-crashes', action='store_true', help="suppress crashes when training with the entry point so that the "
-                        "main method can return a value (useful for sweeps)")
+    parser.add_argument('--suppress-crashes', action='store_true',
+                        help="suppress crashes when training with the entry point so that "
+                             "the main method can return a value (useful for sweeps)")
     parser.add_argument('--profile', action='store_true', help="enable autograd profiler emit_nvtx")
     parser.add_argument('--ema-decay', default=-1.0, type=float, help="enable moving average for model weights")
     parser.add_argument("--validate-with-ema", action="store_true")
-    
+
 
     from .registry import REGISTRIES
     for registry_name, REGISTRY in REGISTRIES.items():
@@ -325,7 +323,9 @@ def add_optimization_args(parser):
     group.add_argument('--clip-norm', default=0, type=float, metavar='NORM',
                        help='clip threshold of gradients')
     group.add_argument('--per-sample-clip-norm', default=0, type=float, metavar='PNORM',
-                       help='clip threshold of gradients, before gradient sync over workers. In fp16/bf16 mode, --fp32-grad should be set, and --dpp-backend should be no_c10d')
+                       help='clip threshold of gradients, before gradient sync over workers. '
+                            'In fp16/bf16 mode, --fp32-grad should be set, and '
+                            '--dpp-backend should be no_c10d')
     group.add_argument('--update-freq', default='1', metavar='N1,N2,...,N_K',
                        type=lambda uf: eval_str_list(uf, type=int),
                        help='update parameters every N_i batches, when in epoch i')

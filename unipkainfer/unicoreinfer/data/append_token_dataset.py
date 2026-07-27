@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import numpy as np
 import torch
 from functools import lru_cache
 
@@ -22,4 +21,3 @@ class AppendTokenDataset(BaseWrapperDataset):
         if self.token is not None:
             item = torch.cat([item, torch.full_like(item[0], self.token).unsqueeze(0)], dim=0)
         return item
-

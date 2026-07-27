@@ -6,7 +6,6 @@ from functools import lru_cache
 
 import torch
 from ..data import Dictionary
-from functools import lru_cache
 from . import BaseWrapperDataset
 
 
@@ -15,7 +14,7 @@ class TokenizeDataset(BaseWrapperDataset):
         self,
         dataset: torch.utils.data.Dataset,
         dictionary: Dictionary,
-        max_seq_len: int=512,
+        max_seq_len: int = 512,
     ):
         self.dataset = dataset
         self.dictionary = dictionary

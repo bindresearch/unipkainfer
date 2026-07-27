@@ -9,10 +9,11 @@ import importlib
 import logging
 import os
 import sys
-import warnings
 from copy import deepcopy
 from functools import partial
-from typing import List, Callable, Any, Dict
+from typing import List, Callable
+
+import numpy as np
 import torch
 import torch.utils.checkpoint
 import torch.nn.functional as F
@@ -21,7 +22,7 @@ try:
     import unicoreinfer_fused_multi_tensor
 
     HAS_MULTI_TENSOR = True
-except:
+except ImportError:
     print("fused_multi_tensor is not installed corrected")
     HAS_MULTI_TENSOR = False
 
@@ -29,7 +30,7 @@ try:
     import unicoreinfer_fused_rounding
 
     HAS_FUSED_ROUNDING = True
-except:
+except ImportError:
     print("fused_rounding is not installed corrected")
     HAS_FUSED_ROUNDING = False
 
@@ -139,16 +140,12 @@ def import_user_module(args):
     module_path = getattr(args, "user_dir", None)
     if module_path is not None:
         module_path = os.path.abspath(args.user_dir)
-        if not os.path.exists(module_path) and not os.path.isfile(
-            os.path.dirname(module_path)
-        ):
+        if not os.path.exists(module_path) and not os.path.isfile(os.path.dirname(module_path)):
             unicoreinfer_rel_path = os.path.join(os.path.dirname(__file__), args.user_dir)
             if os.path.exists(unicoreinfer_rel_path):
                 module_path = unicoreinfer_rel_path
             else:
-                unicoreinfer_rel_path = os.path.join(
-                    os.path.dirname(__file__), "..", args.user_dir
-                )
+                unicoreinfer_rel_path = os.path.join(os.path.dirname(__file__), "..", args.user_dir)
                 if os.path.exists(unicoreinfer_rel_path):
                     module_path = unicoreinfer_rel_path
                 else:
@@ -225,7 +222,7 @@ def torch_seed(seed, *addl_seeds):
         return
 
     def check_seed(s):
-        assert type(s) == int or type(s) == np.int32 or type(s) == np.int64
+        assert isinstance(s, (int, np.integer))
 
     check_seed(seed)
     if len(addl_seeds) > 0:
@@ -402,8 +399,8 @@ def tree_map(fn, tree, leaf_type):
     elif isinstance(tree, leaf_type):
         try:
             return fn(tree)
-        except:
-            raise ValueError(f"cannot apply {fn} on {tree}.")
+        except Exception as exc:
+            raise ValueError(f"cannot apply {fn} on {tree}.") from exc
     else:
         raise ValueError(f"{type(tree)} not supported")
 
@@ -415,9 +412,7 @@ def fp32_to_bf16_sr(t, o):
     if HAS_FUSED_ROUNDING and t.device.type == "cuda":
         unicoreinfer_fused_rounding.fp32_to_bf16_sr(t, o)
     else:
-        r = (
-            torch.rand(size=t.size(), device=t.device, dtype=torch.float32) - 0.5
-        ) / 256
+        r = (torch.rand(size=t.size(), device=t.device, dtype=torch.float32) - 0.5) / 256
         m, e = torch.frexp(t)
         t = t + torch.ldexp(r, e)
         o.data.copy_(t.bfloat16())

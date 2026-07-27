@@ -79,6 +79,7 @@ class UnicoreDataset(torch.utils.data.Dataset, EpochListening):
         Given an ordered set of indices
         """
         from ..data import data_utils
+
         return data_utils.batch_by_size(
             indices,
             batch_size=batch_size,

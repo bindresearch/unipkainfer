@@ -4,13 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, Optional
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
 from .. import utils
 from torch import nn
 from . import LayerNorm, SelfMultiheadAttention, CrossMultiheadAttention
+
 
 class TransformerDecoderLayer(nn.Module):
     """
@@ -27,7 +28,7 @@ class TransformerDecoderLayer(nn.Module):
         attention_dropout: float = 0.1,
         activation_dropout: float = 0.0,
         activation_fn: str = "gelu",
-        post_ln = False,
+        post_ln=False,
     ) -> None:
         super().__init__()
 
@@ -63,11 +64,10 @@ class TransformerDecoderLayer(nn.Module):
         self.final_layer_norm = LayerNorm(self.embed_dim)
         self.post_ln = post_ln
 
-
     def forward(
         self,
         x: torch.Tensor,
-        encoder_out:torch.Tensor=None,
+        encoder_out: torch.Tensor = None,
         attn_bias: Optional[torch.Tensor] = None,
         padding_mask: Optional[torch.Tensor] = None,
         encoder_attn_bias: Optional[torch.Tensor] = None,
@@ -102,12 +102,11 @@ class TransformerDecoderLayer(nn.Module):
                 key_padding_mask=encoder_padding_mask,
                 attn_bias=encoder_attn_bias,
             )
-            #x = self.dropout_module(x)
+            # x = self.dropout_module(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
             x = residual + x
             if self.post_ln:
                 x = self.encoder_attn_layer_norm(x)
-        
 
         residual = x
         if not self.post_ln:

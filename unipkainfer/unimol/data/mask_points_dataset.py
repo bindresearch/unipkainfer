@@ -70,9 +70,7 @@ class MaskPointsDataset(BaseWrapperDataset):
         elif self.noise_type == "normal":
             self.noise_f = lambda num_mask: np.random.randn(num_mask, 3) * self.noise
         elif self.noise_type == "uniform":
-            self.noise_f = lambda num_mask: np.random.uniform(
-                low=-self.noise, high=self.noise, size=(num_mask, 3)
-            )
+            self.noise_f = lambda num_mask: np.random.uniform(low=-self.noise, high=self.noise, size=(num_mask, 3))
         else:
             self.noise_f = lambda num_mask: 0.0
 
@@ -99,8 +97,7 @@ class MaskPointsDataset(BaseWrapperDataset):
             # decide elements to mask
             num_mask = int(
                 # add a random number for probabilistic rounding
-                self.mask_prob * sz
-                + np.random.rand()
+                self.mask_prob * sz + np.random.rand()
             )
             mask_idc = np.random.choice(sz, num_mask, replace=False)
             mask = np.full(sz, False)
@@ -111,7 +108,7 @@ class MaskPointsDataset(BaseWrapperDataset):
             # for charge
             ret["charge_targets"] = np.full(len(mask), self.charge_pad_idx)
             ret["charge_targets"][mask] = charge[mask]
-            ret["charge_targets"] = torch.from_numpy(ret["charge_targets"]).long()            
+            ret["charge_targets"] = torch.from_numpy(ret["charge_targets"]).long()
 
             # decide unmasking and random replacement
             rand_or_unmask_prob = self.random_token_prob + self.leave_unmasked_prob
@@ -140,10 +137,10 @@ class MaskPointsDataset(BaseWrapperDataset):
             num_mask = mask.astype(np.int32).sum()
             new_coord = np.copy(coord)
             new_coord[mask, :] += self.noise_f(num_mask)
-            
+
             # for charge mask
             new_charge = np.copy(charge)
-            new_charge[mask] = self.charge_mask_idx            
+            new_charge[mask] = self.charge_mask_idx
 
             if rand_mask is not None:
                 num_rand = rand_mask.sum()
@@ -163,4 +160,3 @@ class MaskPointsDataset(BaseWrapperDataset):
             ret["coordinates"] = torch.from_numpy(new_coord).float()
             ret["charges"] = torch.from_numpy(new_charge).long()
             return ret
-

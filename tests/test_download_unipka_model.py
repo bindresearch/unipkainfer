@@ -79,10 +79,7 @@ def test_missing_checkpoint_message_recommends_downloader_for_model_folder():
         Path("/models/with spaces"),
     )
 
-    assert (
-        "unipka-download-model --output-folder '/models/with spaces'"
-        in message
-    )
+    assert "unipka-download-model --output-folder '/models/with spaces'" in message
 
 
 def test_missing_default_checkpoint_message_uses_short_command(monkeypatch, tmp_path):

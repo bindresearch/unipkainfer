@@ -11,14 +11,13 @@ from argparse import Namespace
 from typing import Any, Callable, Dict, List
 
 import torch
-from .. import metrics, utils
+from .. import metrics
 from ..data import UnicoreDataset, data_utils, iterators
 
 logger = logging.getLogger(__name__)
 
 
 class StatefulContainer(object):
-
     _state: Dict[str, Any] = dict()
     _factories: Dict[str, Callable[[], Any]] = dict()
 
@@ -83,7 +82,6 @@ class UnicoreTask(object):
         self.dataset_to_epoch_iter = dict()
         self.state = StatefulContainer()
 
-
     @classmethod
     def setup_task(cls, args: Namespace, **kwargs):
         """Setup the task (e.g., load dictionaries).
@@ -96,12 +94,7 @@ class UnicoreTask(object):
     def has_sharded_data(self, split):
         return os.pathsep in getattr(self.args, "data", "")
 
-    def load_dataset(
-        self,
-        split: str,
-        combine: bool = False,
-        **kwargs
-    ):
+    def load_dataset(self, split: str, combine: bool = False, **kwargs):
         """Load a given dataset split.
 
         Args:
@@ -180,9 +173,7 @@ class UnicoreTask(object):
             ~unicoreinfer.iterators.EpochBatchIterator: a batched iterator over the
                 given dataset split
         """
-        can_reuse_epoch_itr = not disable_iterator_cache and self.can_reuse_epoch_itr(
-            dataset
-        )
+        can_reuse_epoch_itr = not disable_iterator_cache and self.can_reuse_epoch_itr(dataset)
         if can_reuse_epoch_itr and dataset in self.dataset_to_epoch_iter:
             logger.info("reusing EpochBatchIterator for epoch {}".format(epoch))
             return self.dataset_to_epoch_iter[dataset]
@@ -233,6 +224,7 @@ class UnicoreTask(object):
             a :class:`~unicoreinfer.models.BaseUnicoreModel` instance
         """
         from .. import models
+
         return models.build_model(args, self)
 
     def build_loss(self, args: Namespace):
@@ -250,9 +242,7 @@ class UnicoreTask(object):
 
         return losses.build_loss(args, self)
 
-    def train_step(
-        self, sample, model, loss, optimizer, update_num, ignore_grad=False
-    ):
+    def train_step(self, sample, model, loss, optimizer, update_num, ignore_grad=False):
         """
         Do forward and backward, and return the loss as computed by *loss*
         for the given *model* and *sample*.
@@ -305,12 +295,10 @@ class UnicoreTask(object):
         """Hook function called before the start of each validation epoch."""
         pass
 
-    def reduce_metrics(self, logging_outputs, loss, split='train'):
+    def reduce_metrics(self, logging_outputs, loss, split="train"):
         """Aggregate logging outputs from data parallel training."""
         if not any("bsz" in log for log in logging_outputs):
-            warnings.warn(
-                "bsz not found in Loss logging outputs, cannot log bsz"
-            )
+            warnings.warn("bsz not found in Loss logging outputs, cannot log bsz")
         else:
             bsz = sum(log.get("bsz", 0) for log in logging_outputs)
             metrics.log_scalar("bsz", bsz, priority=190, round=1)

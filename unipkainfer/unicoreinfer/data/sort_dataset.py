@@ -28,7 +28,7 @@ class EpochShuffleDataset(BaseWrapperDataset):
         self.size = size
         self.seed = seed
         self.set_epoch(1)
-    
+
     def set_epoch(self, epoch):
         super().set_epoch(epoch)
         with data_utils.numpy_seed(self.seed + epoch - 1):

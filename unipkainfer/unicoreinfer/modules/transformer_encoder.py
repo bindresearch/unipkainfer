@@ -14,12 +14,12 @@ from . import TransformerEncoderLayer, LayerNorm
 
 
 def init_bert_params(module):
-    if not getattr(module, 'can_global_init', True):
+    if not getattr(module, "can_global_init", True):
         return
+
     def normal_(data):
-        data.copy_(
-            data.cpu().normal_(mean=0.0, std=0.02).to(data.device)
-        )
+        data.copy_(data.cpu().normal_(mean=0.0, std=0.02).to(data.device))
+
     if isinstance(module, nn.Linear):
         normal_(module.weight.data)
         if module.bias is not None:
@@ -40,9 +40,10 @@ def relative_position_bucket(relative_position, num_buckets=32, max_distance=128
     is_small = n < max_exact
     max_bucket_val = num_buckets - 1 - max_exact
     # The other half of the buckets are for logarithmically bigger bins in positions up to max_distance
-    val_if_large = max_exact + torch.ceil(
-        torch.log(n.float() / max_exact) / math.log((max_distance - 1) / max_exact) * (max_bucket_val)
-    ).long()
+    val_if_large = (
+        max_exact
+        + torch.ceil(torch.log(n.float() / max_exact) / math.log((max_distance - 1) / max_exact) * (max_bucket_val)).long()
+    )
     val_if_large = torch.min(val_if_large, torch.full_like(val_if_large, num_buckets - 1))
     ret = torch.where(is_small, n, val_if_large) * sign
     return ret
@@ -89,7 +90,6 @@ class TransformerEncoder(nn.Module):
                     activation_dropout=activation_dropout,
                     activation_fn=activation_fn,
                     post_ln=post_ln,
-                    
                 )
                 for _ in range(encoder_layers)
             ]
@@ -107,9 +107,7 @@ class TransformerEncoder(nn.Module):
             memory_position = torch.arange(seq_len, dtype=torch.long)[None, :]
             relative_position = memory_position - context_position
             self.rp_bucket = relative_position_bucket(
-                relative_position,
-                num_buckets=self.rel_pos_bins,
-                max_distance=self.max_rel_pos
+                relative_position, num_buckets=self.rel_pos_bins, max_distance=self.max_rel_pos
             )
             self.rp_bucket -= self.rp_bucket.min()
 
@@ -129,8 +127,8 @@ class TransformerEncoder(nn.Module):
         attn_mask: Optional[torch.Tensor] = None,
         padding_mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        
-        seq_len = emb.size(1)        
+
+        seq_len = emb.size(1)
         x = self.emb_layer_norm(emb)
         x = F.dropout(x, p=self.emb_dropout, training=self.training)
 
@@ -147,16 +145,13 @@ class TransformerEncoder(nn.Module):
         if attn_mask is not None and padding_mask is not None:
             # merge key_padding_mask and attn_mask
             attn_mask = attn_mask.view(x.size(0), -1, seq_len, seq_len)
-            attn_mask.masked_fill_(
-                padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool),
-                float("-inf")
-            )
+            attn_mask.masked_fill_(padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool), float("-inf"))
             attn_mask = attn_mask.view(-1, seq_len, seq_len)
             padding_mask = None
-            
-        for layer in self.layers:   
+
+        for layer in self.layers:
             x = layer(x, padding_mask=padding_mask, attn_bias=attn_mask)
-        
+
         if self.final_layer_norm is not None:
             x = self.final_layer_norm(x)
 

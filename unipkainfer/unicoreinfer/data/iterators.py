@@ -110,9 +110,7 @@ class EpochBatchIterating(object):
     def next_epoch_idx(self):
         raise NotImplementedError
 
-    def next_epoch_itr(
-        self, shuffle=True, fix_batches_to_gpus=False, set_dataset_epoch=True
-    ):
+    def next_epoch_itr(self, shuffle=True, fix_batches_to_gpus=False, set_dataset_epoch=True):
         """Return a new iterator over the dataset.
 
         Args:
@@ -204,9 +202,7 @@ class EpochBatchIterator(EpochBatchIterating):
         self.dataset = dataset
         self.collate_fn = collate_fn
         self.batch_sampler = batch_sampler
-        self._frozen_batches = (
-            tuple(batch_sampler) if not callable(batch_sampler) else None
-        )
+        self._frozen_batches = tuple(batch_sampler) if not callable(batch_sampler) else None
         self.seed = seed
         self.num_shards = num_shards
         self.shard_id = shard_id
@@ -261,9 +257,7 @@ class EpochBatchIterator(EpochBatchIterating):
         else:
             return self.epoch
 
-    def next_epoch_itr(
-        self, shuffle=True, fix_batches_to_gpus=False, set_dataset_epoch=True
-    ):
+    def next_epoch_itr(self, shuffle=True, fix_batches_to_gpus=False, set_dataset_epoch=True):
         """Return a new iterator over the dataset.
 
         Args:
@@ -332,7 +326,10 @@ class EpochBatchIterator(EpochBatchIterating):
                 old_itr_pos = itr_pos
                 itr_pos = int(itr_pos * len(self) / state_dict["len"])
                 logger.info(
-                    "Iterator size is changed. it is possible due to the change of update_freq/num_gpu. The itr_pos is change from {} to {} for consistency".format(old_itr_pos, itr_pos)
+                    "Iterator size changed, possibly because update_freq/num_gpu changed. "
+                    "Adjusting itr_pos from %s to %s for consistency.",
+                    old_itr_pos,
+                    itr_pos,
                 )
 
             # fast-forward epoch iterator
@@ -349,9 +346,7 @@ class EpochBatchIterator(EpochBatchIterating):
         else:
             self._next_epoch_itr = None
 
-    def _get_iterator_for_epoch(
-        self, epoch, shuffle, fix_batches_to_gpus=False, offset=0
-    ):
+    def _get_iterator_for_epoch(self, epoch, shuffle, fix_batches_to_gpus=False, offset=0):
         def shuffle_batches(batches, seed):
             with data_utils.numpy_seed(seed):
                 np.random.shuffle(batches)
@@ -363,9 +358,7 @@ class EpochBatchIterator(EpochBatchIterating):
             if shuffle and not fix_batches_to_gpus:
                 batches = shuffle_batches(list(batches), self.seed + epoch)
 
-            batches = list(
-                ShardedIterator(batches, self.num_shards, self.shard_id, fill_value=[])
-            )
+            batches = list(ShardedIterator(batches, self.num_shards, self.shard_id, fill_value=[]))
             self.dataset.prefetch([i for s in batches for i in s])
 
             if shuffle and fix_batches_to_gpus:
@@ -375,9 +368,7 @@ class EpochBatchIterator(EpochBatchIterating):
                 batches = shuffle_batches(list(self.frozen_batches), self.seed + epoch)
             else:
                 batches = self.frozen_batches
-            batches = list(
-                ShardedIterator(batches, self.num_shards, self.shard_id, fill_value=[])
-            )
+            batches = list(ShardedIterator(batches, self.num_shards, self.shard_id, fill_value=[]))
 
         if offset > 0 and offset >= len(batches):
             return None
@@ -534,10 +525,7 @@ class BufferedIterator(object):
         # Notify the user if there is a data loading bottleneck
         if self._queue.qsize() < min(2, max(1, self._queue.maxsize // 2)):
             if time.time() - self.start_time > 5 * 60:
-                if (
-                    self.warning_time is None
-                    or time.time() - self.warning_time > 15 * 60
-                ):
+                if self.warning_time is None or time.time() - self.warning_time > 15 * 60:
                     logger.debug(
                         "Data loading buffer is empty or nearly empty. This may "
                         "indicate a data loading bottleneck, and increasing the "

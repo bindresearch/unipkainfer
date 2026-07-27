@@ -93,9 +93,7 @@ class _FreeEnergyFoldRunner:
     ) -> "_FreeEnergyFoldRunner":
         checkpoint = _resolve_checkpoint(cfg.model_dir, fold)
         if not checkpoint.exists():
-            raise FileNotFoundError(
-                _missing_checkpoint_message(checkpoint, cfg.model_dir)
-            )
+            raise FileNotFoundError(_missing_checkpoint_message(checkpoint, cfg.model_dir))
 
         with _suppress_unipka_extension_output():
             try:
@@ -104,11 +102,11 @@ class _FreeEnergyFoldRunner:
                     tasks,
                     utils as unicoreinfer_utils,
                 )
+
                 _ensure_unipka_modules()
             except ModuleNotFoundError as exc:
                 raise ModuleNotFoundError(
-                    "Uni-pKa inference dependencies are missing. Install them with "
-                    "`python -m pip install unipkainfer`."
+                    "Uni-pKa inference dependencies are missing. Install them with `python -m pip install unipkainfer`."
                 ) from exc
 
         with _suppress_unipka_extension_output():
@@ -356,9 +354,7 @@ def _expand_unique_free_energy_predictions(
     inverse_indices: Sequence[int],
 ) -> pd.DataFrame:
     if len(unique_results) <= max(inverse_indices, default=-1):
-        raise ValueError(
-            f"Expected at least {max(inverse_indices) + 1} unique predictions, got {len(unique_results)}."
-        )
+        raise ValueError(f"Expected at least {max(inverse_indices) + 1} unique predictions, got {len(unique_results)}.")
 
     rows = []
     for molecule_index, (smi, unique_idx) in enumerate(zip(smiles, inverse_indices)):
@@ -447,9 +443,7 @@ def predict_standard_free_energies(
                 fold,
                 processed_dir,
             )
-            fold_results.append(
-                runner.predict(processed_dir, fold_task, len(unique_smiles))
-            )
+            fold_results.append(runner.predict(processed_dir, fold_task, len(unique_smiles)))
 
         if len(fold_results) == 1:
             unique_results = fold_results[0]
@@ -478,9 +472,7 @@ def _write_free_energy_lmdb(
     try:
         import lmdb
     except ModuleNotFoundError as exc:
-        raise ModuleNotFoundError(
-            "Uni-pKa free-energy inference requires the optional 'lmdb' package."
-        ) from exc
+        raise ModuleNotFoundError("Uni-pKa free-energy inference requires the optional 'lmdb' package.") from exc
 
     if lmdb_path.exists():
         lmdb_path.unlink()
@@ -678,14 +670,8 @@ def _smiles_to_3d_coords(
     except Exception:
         conf_ids = []
 
-    coordinates = [
-        mol.GetConformer(int(conf_id)).GetPositions().astype(np.float32)
-        for conf_id in conf_ids
-    ]
-    coordinates.extend(
-        _smiles_to_2d_coords(smi)
-        for _ in range(conformer_count - len(coordinates))
-    )
+    coordinates = [mol.GetConformer(int(conf_id)).GetPositions().astype(np.float32) for conf_id in conf_ids]
+    coordinates.extend(_smiles_to_2d_coords(smi) for _ in range(conformer_count - len(coordinates)))
     return coordinates
 
 

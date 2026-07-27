@@ -54,9 +54,7 @@ def progress_bar(
         raise ValueError("Unknown log format: {}".format(log_format))
 
     if tensorboard_logdir:
-        bar = TensorboardProgressBarWrapper(
-            bar, tensorboard_logdir, wandb_project, args
-        )
+        bar = TensorboardProgressBarWrapper(bar, tensorboard_logdir, wandb_project, args)
 
     return bar
 
@@ -154,11 +152,7 @@ class JsonProgressBar(BaseProgressBar):
         """Log intermediate stats according to log_interval."""
         step = step or self.i or 0
         if step > 0 and self.log_interval is not None and step % self.log_interval == 0:
-            update = (
-                self.epoch - 1 + (self.i + 1) / float(self.size)
-                if self.epoch is not None
-                else None
-            )
+            update = self.epoch - 1 + (self.i + 1) / float(self.size) if self.epoch is not None else None
             stats = self._format_stats(stats, epoch=self.epoch, update=update)
             with rename_logger(logger, tag):
                 logger.info(json.dumps(stats))
@@ -167,9 +161,7 @@ class JsonProgressBar(BaseProgressBar):
         """Print end-of-epoch stats."""
         self.stats = stats
         if tag is not None:
-            self.stats = OrderedDict(
-                [(tag + "_" + k, v) for k, v in self.stats.items()]
-            )
+            self.stats = OrderedDict([(tag + "_" + k, v) for k, v in self.stats.items()])
         stats = self._format_stats(self.stats, epoch=self.epoch)
         with rename_logger(logger, tag):
             logger.info(json.dumps(stats))
@@ -227,11 +219,7 @@ class SimpleProgressBar(BaseProgressBar):
             stats = self._format_stats(stats)
             postfix = self._str_commas(stats)
             with rename_logger(logger, tag):
-                logger.info(
-                    "{}:  {:5d} / {:d} {}".format(
-                        self.prefix, self.i + 1, self.size, postfix
-                    )
-                )
+                logger.info("{}:  {:5d} / {:d} {}".format(self.prefix, self.i + 1, self.size, postfix))
 
     def print(self, stats, tag=None, step=None):
         """Print end-of-epoch stats."""
@@ -292,7 +280,7 @@ def _close_writers():
     if _wandb_inited:
         try:
             wandb.finish()
-        except:
+        except Exception:
             pass
 
 
@@ -307,9 +295,7 @@ class TensorboardProgressBarWrapper(BaseProgressBar):
         self.tensorboard_logdir = tensorboard_logdir
 
         if SummaryWriter is None:
-            logger.warning(
-                "tensorboard not found, please install with: pip install tensorboard"
-            )
+            logger.warning("tensorboard not found, please install with: pip install tensorboard")
         global _wandb_inited
         if not _wandb_inited and wandb_project and wandb_available:
             wandb_name = args.wandb_name or wandb.util.generate_id()

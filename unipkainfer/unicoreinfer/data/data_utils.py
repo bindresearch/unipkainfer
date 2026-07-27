@@ -56,7 +56,7 @@ def collate_tokens_2d(
         dst.copy_(src)
 
     for i, v in enumerate(values):
-        copy_tensor(v, res[i][size - len(v):, size - len(v):] if left_pad else res[i][:len(v), :len(v)])
+        copy_tensor(v, res[i][size - len(v) :, size - len(v) :] if left_pad else res[i][: len(v), : len(v)])
     return res
 
 
@@ -73,11 +73,11 @@ def collate_dict(
     return ret
 
 
-def str_hash(text:str):
-  hash=0
-  for ch in text:
-    hash = ( hash*281  ^ ord(ch)*997) & 0xFFFFFFFF
-  return hash
+def str_hash(text: str):
+    hash = 0
+    for ch in text:
+        hash = (hash * 281 ^ ord(ch) * 997) & 0xFFFFFFFF
+    return hash
 
 
 @contextlib.contextmanager
@@ -87,8 +87,10 @@ def numpy_seed(seed, *addl_seeds, key=None):
     if seed is None:
         yield
         return
+
     def check_seed(s):
-        assert type(s) == int or type(s) == np.int32 or type(s) == np.int64
+        assert isinstance(s, (int, np.integer))
+
     check_seed(seed)
     if len(addl_seeds) > 0:
         for s in addl_seeds:

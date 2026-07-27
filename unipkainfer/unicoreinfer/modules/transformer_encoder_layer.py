@@ -4,13 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, Optional
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
 from .. import utils
 from torch import nn
 from . import LayerNorm, SelfMultiheadAttention
+
 
 class TransformerEncoderLayer(nn.Module):
     """
@@ -27,7 +28,7 @@ class TransformerEncoderLayer(nn.Module):
         attention_dropout: float = 0.1,
         activation_dropout: float = 0.0,
         activation_fn: str = "gelu",
-        post_ln = False,
+        post_ln=False,
     ) -> None:
         super().__init__()
 
@@ -52,13 +53,12 @@ class TransformerEncoderLayer(nn.Module):
         self.final_layer_norm = LayerNorm(self.embed_dim)
         self.post_ln = post_ln
 
-
     def forward(
         self,
         x: torch.Tensor,
         attn_bias: Optional[torch.Tensor] = None,
         padding_mask: Optional[torch.Tensor] = None,
-        return_attn: bool=False,
+        return_attn: bool = False,
     ) -> torch.Tensor:
         """
         LayerNorm is applied either before or after the self-attention/ffn
@@ -96,4 +96,3 @@ class TransformerEncoderLayer(nn.Module):
             return x
         else:
             return x, attn_weights, attn_probs
-                

@@ -128,9 +128,7 @@ class UniMolFreeEnergyTask(UnicoreTask):
         """
         split_path = os.path.join(self.args.data, self.args.task_name, split + ".lmdb")
         dataset = LMDBDataset(split_path)
-        dataset = TTADataset(
-            dataset, self.args.seed, "atoms", "coordinates", "charges", "smi", self.args.conf_size
-        )
+        dataset = TTADataset(dataset, self.args.seed, "atoms", "coordinates", "charges", "smi", self.args.conf_size)
         tgt_dataset = KeyDataset(dataset, "target")
         smi_dataset = KeyDataset(dataset, "smi")
 
@@ -142,30 +140,20 @@ class UniMolFreeEnergyTask(UnicoreTask):
             self.args.remove_hydrogen,
             self.args.remove_polar_hydrogen,
         )
-        dataset = CroppingDataset(
-            dataset, self.seed, "atoms", "coordinates", "charges", self.args.max_atoms
-        )
+        dataset = CroppingDataset(dataset, self.seed, "atoms", "coordinates", "charges", self.args.max_atoms)
         dataset = NormalizeDataset(dataset, "coordinates", normalize_coord=True)
         src_dataset = KeyDataset(dataset, "atoms")
-        src_dataset = TokenizeDataset(
-            src_dataset, self.dictionary, max_seq_len=self.args.max_seq_len
-        )
+        src_dataset = TokenizeDataset(src_dataset, self.dictionary, max_seq_len=self.args.max_seq_len)
         src_charge_dataset = KeyDataset(dataset, "charges")
-        src_charge_dataset = TokenizeDataset(
-            src_charge_dataset, self.charge_dictionary, max_seq_len=self.args.max_seq_len
-        )
+        src_charge_dataset = TokenizeDataset(src_charge_dataset, self.charge_dictionary, max_seq_len=self.args.max_seq_len)
         coord_dataset = KeyDataset(dataset, "coordinates")
 
         def PrependAndAppend(dataset, pre_token, app_token):
             dataset = PrependTokenDataset(dataset, pre_token)
             return AppendTokenDataset(dataset, app_token)
 
-        src_dataset = PrependAndAppend(
-            src_dataset, self.dictionary.bos(), self.dictionary.eos()
-        )
-        src_charge_dataset = PrependAndAppend(
-            src_charge_dataset, self.charge_dictionary.bos(), self.charge_dictionary.eos()
-        )
+        src_dataset = PrependAndAppend(src_dataset, self.dictionary.bos(), self.dictionary.eos())
+        src_charge_dataset = PrependAndAppend(src_charge_dataset, self.charge_dictionary.bos(), self.charge_dictionary.eos())
         edge_type = EdgeTypeDataset(src_dataset, len(self.dictionary))
         coord_dataset = FromNumpyDataset(coord_dataset)
         coord_dataset = PrependAndAppend(coord_dataset, 0.0, 0.0)

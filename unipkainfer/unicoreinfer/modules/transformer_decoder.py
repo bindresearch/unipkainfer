@@ -17,9 +17,7 @@ def fill_with_neg_inf(t):
 
 
 def bulid_future_mask(seq_len):
-    return torch.triu(
-        fill_with_neg_inf(torch.zeros([seq_len, seq_len])), 1
-    )
+    return torch.triu(fill_with_neg_inf(torch.zeros([seq_len, seq_len])), 1)
 
 
 class TransformerDecoder(nn.Module):
@@ -69,7 +67,6 @@ class TransformerDecoder(nn.Module):
                     activation_dropout=activation_dropout,
                     activation_fn=activation_fn,
                     post_ln=post_ln,
-
                 )
                 for _ in range(decoder_layers)
             ]
@@ -80,16 +77,13 @@ class TransformerDecoder(nn.Module):
             assert rel_pos_bins % 2 == 0
             self.rel_pos_bins = rel_pos_bins
             self.max_rel_pos = max_rel_pos
-            self.relative_attention_bias = nn.Embedding(
-                self.rel_pos_bins, self.attention_heads)
+            self.relative_attention_bias = nn.Embedding(self.rel_pos_bins, self.attention_heads)
             seq_len = self.max_seq_len
             context_position = torch.arange(seq_len, dtype=torch.long)[:, None]
             memory_position = torch.arange(seq_len, dtype=torch.long)[None, :]
             relative_position = memory_position - context_position
             self.rp_bucket = relative_position_bucket(
-                relative_position,
-                num_buckets=self.rel_pos_bins,
-                max_distance=self.max_rel_pos
+                relative_position, num_buckets=self.rel_pos_bins, max_distance=self.max_rel_pos
             )
             self.rp_bucket -= self.rp_bucket.min()
 
@@ -111,14 +105,12 @@ class TransformerDecoder(nn.Module):
         if self._future_mask.dtype != x.dtype:
             self._future_mask = self._future_mask.type_as(x)
         if attn_mask is None:
-            ret = self._future_mask[:x.size(1), :x.size(1)]
-            ret = ret.contiguous().unsqueeze(0).repeat(
-                x.size(0)*self.attention_heads, 1, 1)
+            ret = self._future_mask[: x.size(1), : x.size(1)]
+            ret = ret.contiguous().unsqueeze(0).repeat(x.size(0) * self.attention_heads, 1, 1)
             return ret
         else:
-            assert list(attn_mask.size()) == [x.size(
-                0) * self.attention_heads, x.size(1), x.size(1)]
-            return attn_mask + self._future_mask[:x.size(1), :x.size(1)]
+            assert list(attn_mask.size()) == [x.size(0) * self.attention_heads, x.size(1), x.size(1)]
+            return attn_mask + self._future_mask[: x.size(1), : x.size(1)]
 
     def forward(
         self,
@@ -138,8 +130,7 @@ class TransformerDecoder(nn.Module):
         if padding_mask is not None:
             x = x * (1 - padding_mask.unsqueeze(-1).type_as(x))
 
-        rel_pos_bias = self.get_rel_pos_bias(x).repeat(
-            x.size(0), 1, 1) if self.rel_pos else None
+        rel_pos_bias = self.get_rel_pos_bias(x).repeat(x.size(0), 1, 1) if self.rel_pos else None
 
         if attn_mask is None:
             attn_mask = rel_pos_bias
@@ -152,16 +143,19 @@ class TransformerDecoder(nn.Module):
         if attn_mask is not None and padding_mask is not None:
             # merge key_padding_mask and attn_mask
             attn_mask = attn_mask.view(x.size(0), -1, seq_len, seq_len)
-            attn_mask.masked_fill_(
-                padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool),
-                float("-inf")
-            )
+            attn_mask.masked_fill_(padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool), float("-inf"))
             attn_mask = attn_mask.view(-1, seq_len, seq_len)
             padding_mask = None
 
         for layer in self.layers:
-            x = layer(x, encoder_out=encoder_out, padding_mask=padding_mask, attn_bias=attn_mask,
-                      encoder_padding_mask=encoder_padding_mask, encoder_attn_bias=encoder_attn_mask)
+            x = layer(
+                x,
+                encoder_out=encoder_out,
+                padding_mask=padding_mask,
+                attn_bias=attn_mask,
+                encoder_padding_mask=encoder_padding_mask,
+                encoder_attn_bias=encoder_attn_mask,
+            )
 
         if self.final_layer_norm is not None:
             x = self.final_layer_norm(x)

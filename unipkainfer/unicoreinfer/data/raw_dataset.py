@@ -12,7 +12,7 @@ class RawLabelDataset(UnicoreDataset):
     def __init__(self, labels):
         super().__init__()
         self.labels = labels
-    
+
     @lru_cache(maxsize=16)
     def __getitem__(self, index):
         return self.labels[index]
@@ -25,11 +25,10 @@ class RawLabelDataset(UnicoreDataset):
 
 
 class RawArrayDataset(UnicoreDataset):
-
     def __init__(self, dataset):
         super().__init__()
         self.dataset = dataset
-    
+
     @lru_cache(maxsize=16)
     def __getitem__(self, index):
         return self.dataset[index]
@@ -38,14 +37,13 @@ class RawArrayDataset(UnicoreDataset):
         return len(self.dataset)
 
     def collater(self, samples):
-        if hasattr(self.dataset, 'collater'):
+        if hasattr(self.dataset, "collater"):
             return self.dataset.collater(samples)
         else:
             return default_collate(samples)
 
 
 class RawNumpyDataset(UnicoreDataset):
-
     def __init__(self, dataset):
         super().__init__()
         self.dataset = dataset
@@ -58,7 +56,7 @@ class RawNumpyDataset(UnicoreDataset):
         return len(self.dataset)
 
     def collater(self, samples):
-        if hasattr(self.dataset, 'collater'):
+        if hasattr(self.dataset, "collater"):
             return self.dataset.collater(samples)
         else:
             return default_collate(samples)

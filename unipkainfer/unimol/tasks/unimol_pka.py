@@ -99,29 +99,16 @@ class UniMolPKATask(UnicoreTask):
             help="1: only reserve polar hydrogen; 0: no hydrogen; -1: all hydrogen ",
         )
         parser.add_argument(
-            '--split-mode', 
-            type=str, 
-            default='predefine',
-            choices=['predefine', 'cross_valid', 'random', 'infer'],
+            "--split-mode",
+            type=str,
+            default="predefine",
+            choices=["predefine", "cross_valid", "random", "infer"],
         )
+        parser.add_argument("--nfolds", default=5, type=int, help="cross validation split folds")
         parser.add_argument(
-            "--nfolds",
-            default=5,
-            type=int,
-            help="cross validation split folds"
+            "--fold", default=0, type=int, help="local fold used as validation set, and other folds will be used as train set"
         )
-        parser.add_argument(
-            "--fold",
-            default=0,
-            type=int,
-            help='local fold used as validation set, and other folds will be used as train set'
-        )
-        parser.add_argument(
-            "--cv-seed",
-            default=42,
-            type=int,
-            help="random seed used to do cross validation splits"
-        )
+        parser.add_argument("--cv-seed", default=42, type=int, help="random seed used to do cross validation splits")
 
     def __init__(self, args, dictionary, charge_dictionary):
         super().__init__(args)
@@ -137,24 +124,32 @@ class UniMolPKATask(UnicoreTask):
             self.args.remove_polar_hydrogen = False
         else:
             self.args.remove_hydrogen = True
-        if self.args.split_mode !='predefine':
+        if self.args.split_mode != "predefine":
             self.__init_data()
 
     def __init_data(self):
-        data_path = os.path.join(self.args.data, self.args.task_name + '.lmdb')
+        data_path = os.path.join(self.args.data, self.args.task_name + ".lmdb")
         raw_dataset = LMDBDataset(data_path)
-        if self.args.split_mode == 'cross_valid':
+        if self.args.split_mode == "cross_valid":
             train_folds = []
             for _fold in range(self.args.nfolds):
                 if _fold == 0:
-                    cache_fold_info = FoldLMDBDataset(raw_dataset, self.args.cv_seed, _fold, nfolds=self.args.nfolds).get_fold_info()
+                    cache_fold_info = FoldLMDBDataset(
+                        raw_dataset, self.args.cv_seed, _fold, nfolds=self.args.nfolds
+                    ).get_fold_info()
                 if _fold == self.args.fold:
-                    self.valid_dataset = FoldLMDBDataset(raw_dataset, self.args.cv_seed, _fold, nfolds=self.args.nfolds, cache_fold_info=cache_fold_info)
+                    self.valid_dataset = FoldLMDBDataset(
+                        raw_dataset, self.args.cv_seed, _fold, nfolds=self.args.nfolds, cache_fold_info=cache_fold_info
+                    )
                 if _fold != self.args.fold:
-                    train_folds.append(FoldLMDBDataset(raw_dataset, self.args.cv_seed, _fold, nfolds=self.args.nfolds, cache_fold_info=cache_fold_info))
+                    train_folds.append(
+                        FoldLMDBDataset(
+                            raw_dataset, self.args.cv_seed, _fold, nfolds=self.args.nfolds, cache_fold_info=cache_fold_info
+                        )
+                    )
             self.train_dataset = StackedLMDBDataset(train_folds)
-        elif self.args.split_mode == 'random':
-            cache_fold_info = SplitLMDBDataset(raw_dataset, self.args.seed, 0).get_fold_info()   
+        elif self.args.split_mode == "random":
+            cache_fold_info = SplitLMDBDataset(raw_dataset, self.args.seed, 0).get_fold_info()
             self.train_dataset = SplitLMDBDataset(raw_dataset, self.args.seed, 0, cache_fold_info=cache_fold_info)
             self.valid_dataset = SplitLMDBDataset(raw_dataset, self.args.seed, 1, cache_fold_info=cache_fold_info)
 
@@ -172,20 +167,20 @@ class UniMolPKATask(UnicoreTask):
             split (str): name of the data scoure (e.g., train)
         """
         self.split = split
-        if self.args.split_mode != 'predefine':
-            if split == 'train':
+        if self.args.split_mode != "predefine":
+            if split == "train":
                 dataset = self.train_dataset
-            elif split == 'valid':
-                dataset =self.valid_dataset
+            elif split == "valid":
+                dataset = self.valid_dataset
         else:
             split_path = os.path.join(self.args.data, split + ".lmdb")
             dataset = LMDBDataset(split_path)
         tgt_dataset = KeyDataset(dataset, "target")
-        if split in ['train', 'train.small']:
+        if split in ["train", "train.small"]:
             tgt_list = [tgt_dataset[i] for i in range(len(tgt_dataset))]
             self.mean = sum(tgt_list) / len(tgt_list)
             self.std = 1
-        elif self.args.split_mode == 'predefine':
+        elif self.args.split_mode == "predefine":
             self.mean = 6.504894871171601  # precompute from dwar_8228 full set
             self.std = 1
         id_dataset = KeyDataset(dataset, "ori_smi")
@@ -193,13 +188,11 @@ class UniMolPKATask(UnicoreTask):
         def GetPKAInput(dataset, metadata_key):
             mol_dataset = TTAPKADataset(dataset, self.args.seed, metadata_key, "atoms", "coordinates", "charges")
             idx2key = mol_dataset.get_idx2key()
-            if split in ["train","train.small"]:
-                sample_dataset = ConformerSamplePKADataset(
-                    mol_dataset, self.args.seed, "atoms", "coordinates", "charges"
-                )
+            if split in ["train", "train.small"]:
+                sample_dataset = ConformerSamplePKADataset(mol_dataset, self.args.seed, "atoms", "coordinates", "charges")
             else:
                 sample_dataset = TTADataset(
-                    mol_dataset, self.args.seed, "atoms", "coordinates","charges","id", self.args.conf_size
+                    mol_dataset, self.args.seed, "atoms", "coordinates", "charges", "id", self.args.conf_size
                 )
 
             sample_dataset = RemoveHydrogenDataset(
@@ -210,27 +203,19 @@ class UniMolPKATask(UnicoreTask):
                 self.args.remove_hydrogen,
                 self.args.remove_polar_hydrogen,
             )
-            sample_dataset = CroppingDataset(
-                sample_dataset, self.seed, "atoms", "coordinates","charges", self.args.max_atoms
-            )
+            sample_dataset = CroppingDataset(sample_dataset, self.seed, "atoms", "coordinates", "charges", self.args.max_atoms)
             sample_dataset = NormalizeDataset(sample_dataset, "coordinates", normalize_coord=True)
             src_dataset = KeyDataset(sample_dataset, "atoms")
-            src_dataset = TokenizeDataset(
-                src_dataset, self.dictionary, max_seq_len=self.args.max_seq_len
-            )
+            src_dataset = TokenizeDataset(src_dataset, self.dictionary, max_seq_len=self.args.max_seq_len)
             src_charge_dataset = KeyDataset(sample_dataset, "charges")
-            src_charge_dataset = TokenizeDataset(
-                src_charge_dataset, self.charge_dictionary, max_seq_len=self.args.max_seq_len
-            )
+            src_charge_dataset = TokenizeDataset(src_charge_dataset, self.charge_dictionary, max_seq_len=self.args.max_seq_len)
             coord_dataset = KeyDataset(sample_dataset, "coordinates")
 
             def PrependAndAppend(dataset, pre_token, app_token):
                 dataset = PrependTokenDataset(dataset, pre_token)
                 return AppendTokenDataset(dataset, app_token)
 
-            src_dataset = PrependAndAppend(
-                src_dataset, self.dictionary.bos(), self.dictionary.eos()
-            )
+            src_dataset = PrependAndAppend(src_dataset, self.dictionary.bos(), self.dictionary.eos())
             src_charge_dataset = PrependAndAppend(
                 src_charge_dataset, self.charge_dictionary.bos(), self.charge_dictionary.eos()
             )
@@ -239,23 +224,34 @@ class UniMolPKATask(UnicoreTask):
             coord_dataset = PrependAndAppend(coord_dataset, 0.0, 0.0)
             distance_dataset = DistanceDataset(coord_dataset)
 
-            return PKAInputDataset(idx2key, src_dataset, src_charge_dataset, coord_dataset, distance_dataset, edge_type, self.dictionary.pad(), self.charge_dictionary.pad(), split, self.args.conf_size)
+            return PKAInputDataset(
+                idx2key,
+                src_dataset,
+                src_charge_dataset,
+                coord_dataset,
+                distance_dataset,
+                edge_type,
+                self.dictionary.pad(),
+                self.charge_dictionary.pad(),
+                split,
+                self.args.conf_size,
+            )
 
         input_a_dataset = GetPKAInput(dataset, "metadata_a")
         input_b_dataset = GetPKAInput(dataset, "metadata_b")
 
         nest_dataset = NestedDictionaryDataset(
-                {
-                    "net_input_a": input_a_dataset,
-                    "net_input_b": input_b_dataset,
-                    "target": {
-                        "finetune_target": RawLabelDataset(tgt_dataset),
-                    },
-                    "id": id_dataset,
+            {
+                "net_input_a": input_a_dataset,
+                "net_input_b": input_b_dataset,
+                "target": {
+                    "finetune_target": RawLabelDataset(tgt_dataset),
                 },
-            )
+                "id": id_dataset,
+            },
+        )
 
-        if not self.args.no_shuffle and split in ["train","train.small"]:
+        if not self.args.no_shuffle and split in ["train", "train.small"]:
             with data_utils.numpy_seed(self.args.seed):
                 shuffle = np.random.permutation(len(id_dataset))
 

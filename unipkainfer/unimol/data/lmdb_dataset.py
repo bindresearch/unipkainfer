@@ -3,9 +3,6 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import lmdb
-import os
-import pickle
 from functools import lru_cache
 from . import data_utils
 import numpy as np
@@ -39,7 +36,7 @@ class FoldLMDBDataset:
             self.fold_start.append(cur_size)
             cur_size = min(cur_size + average_size, len(dataset))
             self.fold_end.append(cur_size)
-    
+
     def get_fold_info(self):
         return self.keys, self.fold_start, self.fold_end
 
@@ -50,7 +47,7 @@ class FoldLMDBDataset:
     def __getitem__(self, idx):
         global_idx = idx + self.fold_start[self.cur_fold]
         return self.dataset[self.keys[global_idx]]
-            
+
 
 class StackedLMDBDataset:
     def __init__(self, datasets):
@@ -73,15 +70,15 @@ class StackedLMDBDataset:
         file_idx = self.idx_to_file[idx]
         sub_idx = idx - self.idx_offset[file_idx]
         return self.datasets[file_idx][sub_idx]
-    
+
 
 class SplitLMDBDataset:
     # train:valid = 9:1
-    def __init__(self, dataset, seed, cur_fold, cache_fold_info= None,frac_train=0.9, frac_valid=0.1):
+    def __init__(self, dataset, seed, cur_fold, cache_fold_info=None, frac_train=0.9, frac_valid=0.1):
         super().__init__()
         self.dataset = dataset
         np.testing.assert_almost_equal(frac_train + frac_valid, 1.0)
-        frac = [frac_train,frac_valid]
+        frac = [frac_train, frac_valid]
         if cache_fold_info is None:
             self.keys = []
             self.fold_start = []
@@ -97,16 +94,16 @@ class SplitLMDBDataset:
     def init_random_split(self, dataset, seed, frac):
         with data_utils.numpy_seed(seed):
             self.keys = np.random.permutation(len(dataset))
-        frac_train,frac_valid = frac
-        #average_size = (len(dataset) + nfolds - 1) // nfolds
-        fold_size = [int(frac_train * len(dataset)), len(dataset)- int(frac_train * len(dataset))]
+        frac_train, frac_valid = frac
+        # average_size = (len(dataset) + nfolds - 1) // nfolds
+        fold_size = [int(frac_train * len(dataset)), len(dataset) - int(frac_train * len(dataset))]
         assert sum(fold_size) == len(dataset)
         cur_size = 0
         for i in range(len(fold_size)):
             self.fold_start.append(cur_size)
             cur_size = min(cur_size + fold_size[i], len(dataset))
             self.fold_end.append(cur_size)
-    
+
     def get_fold_info(self):
         return self.keys, self.fold_start, self.fold_end
 

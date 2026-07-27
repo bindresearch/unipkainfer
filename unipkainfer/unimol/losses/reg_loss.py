@@ -27,12 +27,12 @@ class FinetuneMSELoss(UnicoreLoss):
         net_output_a, batch_a = model(
             sample["net_input_a"],
             classification_head_name=self.args.classification_head_name,
-            features_only = True,
+            features_only=True,
         )
         net_output_b, batch_b = model(
             sample["net_input_b"],
             classification_head_name=self.args.classification_head_name,
-            features_only = True,
+            features_only=True,
         )
 
         loss, predict = self.compute_loss(model, net_output_a, net_output_b, batch_a, batch_b, sample, reduce=reduce)
@@ -45,9 +45,7 @@ class FinetuneMSELoss(UnicoreLoss):
             logging_output = {
                 "loss": loss.data,
                 "predict": predict.view(-1, self.args.num_classes).data,
-                "target": sample["target"]["finetune_target"]
-                .view(-1, self.args.num_classes)
-                .data,
+                "target": sample["target"]["finetune_target"].view(-1, self.args.num_classes).data,
                 "smi_name": sample["id"],
                 "sample_size": sample_size,
                 "num_task": self.args.num_classes,
@@ -66,31 +64,24 @@ class FinetuneMSELoss(UnicoreLoss):
         free_energy_a = net_output_a.view(-1, self.args.num_classes).float()
         free_energy_b = net_output_b.view(-1, self.args.num_classes).float()
         if not self.training:
+
             def compute_agg_free_energy(free_energy, batch):
                 split_tensor_list = torch.split(free_energy, self.args.conf_size, dim=0)
                 mean_tensor_list = [torch.mean(x, dim=0, keepdim=True) for x in split_tensor_list]
                 agg_free_energy = torch.cat(mean_tensor_list, dim=0)
-                agg_batch = [x//self.args.conf_size for x in batch]
+                agg_batch = [x // self.args.conf_size for x in batch]
                 return agg_free_energy, agg_batch
+
             free_energy_a, batch_a = compute_agg_free_energy(free_energy_a, batch_a)
             free_energy_b, batch_b = compute_agg_free_energy(free_energy_b, batch_b)
 
-        free_energy_a_padded = torch.nn.utils.rnn.pad_sequence(
-            torch.split(free_energy_a, batch_a),
-            padding_value=float("inf")
-        )
-        free_energy_b_padded = torch.nn.utils.rnn.pad_sequence(
-            torch.split(free_energy_b, batch_b),
-            padding_value=float("inf")
-        )
-        predicts = (
-            torch.logsumexp(-free_energy_a_padded, dim=0)-
-            torch.logsumexp(-free_energy_b_padded, dim=0)
-        ) /  torch.log(torch.tensor([10.0])).item()
+        free_energy_a_padded = torch.nn.utils.rnn.pad_sequence(torch.split(free_energy_a, batch_a), padding_value=float("inf"))
+        free_energy_b_padded = torch.nn.utils.rnn.pad_sequence(torch.split(free_energy_b, batch_b), padding_value=float("inf"))
+        predicts = (torch.logsumexp(-free_energy_a_padded, dim=0) - torch.logsumexp(-free_energy_b_padded, dim=0)) / torch.log(
+            torch.tensor([10.0])
+        ).item()
 
-        targets = (
-            sample["target"]["finetune_target"].view(-1, self.args.num_classes).float()
-        )
+        targets = sample["target"]["finetune_target"].view(-1, self.args.num_classes).float()
         if self.task.mean and self.task.std:
             targets_mean = torch.tensor(self.task.mean, device=targets.device)
             targets_std = torch.tensor(self.task.std, device=targets.device)
@@ -108,19 +99,13 @@ class FinetuneMSELoss(UnicoreLoss):
         loss_sum = sum(log.get("loss", 0) for log in logging_outputs)
         sample_size = sum(log.get("sample_size", 0) for log in logging_outputs)
         # we divide by log(2) to convert the loss from base e to base 2
-        metrics.log_scalar(
-            "loss", loss_sum / sample_size / math.log(2), sample_size, round=3
-        )
+        metrics.log_scalar("loss", loss_sum / sample_size / math.log(2), sample_size, round=3)
         if "valid" in split or "test" in split:
             predicts = torch.cat([log.get("predict") for log in logging_outputs], dim=0)
             if predicts.size(-1) == 1:
                 # single label regression task, add aggregate acc and loss score
-                targets = torch.cat(
-                    [log.get("target", 0) for log in logging_outputs], dim=0
-                )
-                smi_list = [
-                    item for log in logging_outputs for item in log.get("smi_name")
-                ]
+                targets = torch.cat([log.get("target", 0) for log in logging_outputs], dim=0)
+                smi_list = [item for log in logging_outputs for item in log.get("smi_name")]
                 df = pd.DataFrame(
                     {
                         "predict": predicts.view(-1).cpu(),
@@ -132,9 +117,7 @@ class FinetuneMSELoss(UnicoreLoss):
                 mse = ((df["predict"] - df["target"]) ** 2).mean()
                 metrics.log_scalar(f"{split}_mae", mae, sample_size, round=3)
                 metrics.log_scalar(f"{split}_mse", mse, sample_size, round=3)
-                metrics.log_scalar(
-                    f"{split}_rmse", np.sqrt(mse), sample_size, round=4
-                )
+                metrics.log_scalar(f"{split}_rmse", np.sqrt(mse), sample_size, round=4)
 
     @staticmethod
     def logging_outputs_can_be_summed(is_train) -> bool:
@@ -188,9 +171,7 @@ class InferFreeEnergyLoss(UnicoreLoss):
             logging_output = {
                 "loss": loss.data,
                 "predict": reg_output.view(-1, self.args.num_classes).data,
-                "target": sample["target"]["finetune_target"]
-                .view(-1, self.args.num_classes)
-                .data,
+                "target": sample["target"]["finetune_target"].view(-1, self.args.num_classes).data,
                 "smi_name": sample["smi_name"],
                 "sample_size": sample_size,
                 "num_task": self.args.num_classes,
@@ -205,9 +186,7 @@ class InferFreeEnergyLoss(UnicoreLoss):
         loss_sum = sum(log.get("loss", 0) for log in logging_outputs)
         sample_size = sum(log.get("sample_size", 0) for log in logging_outputs)
         # we divide by log(2) to convert the loss from base e to base 2
-        metrics.log_scalar(
-            "loss", loss_sum / sample_size / math.log(2), sample_size, round=3
-        )
+        metrics.log_scalar("loss", loss_sum / sample_size / math.log(2), sample_size, round=3)
 
     @staticmethod
     def logging_outputs_can_be_summed(is_train) -> bool:

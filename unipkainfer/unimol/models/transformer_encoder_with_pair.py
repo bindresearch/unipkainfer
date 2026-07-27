@@ -4,7 +4,6 @@
 
 from typing import Optional
 
-import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -94,9 +93,7 @@ class TransformerEncoderWithPair(nn.Module):
         attn_mask, padding_mask = fill_attn_mask(attn_mask, padding_mask)
 
         for i in range(len(self.layers)):
-            x, attn_mask, _ = self.layers[i](
-                x, padding_mask=padding_mask, attn_bias=attn_mask, return_attn=True
-            )
+            x, attn_mask, _ = self.layers[i](x, padding_mask=padding_mask, attn_bias=attn_mask, return_attn=True)
 
         def norm_loss(x, eps=1e-10, tolerance=1.0):
             x = x.float()
@@ -106,9 +103,7 @@ class TransformerEncoderWithPair(nn.Module):
             return error
 
         def masked_mean(mask, value, dim=-1, eps=1e-10):
-            return (
-                torch.sum(mask * value, dim=dim) / (eps + torch.sum(mask, dim=dim))
-            ).mean()
+            return (torch.sum(mask * value, dim=dim) / (eps + torch.sum(mask, dim=dim))).mean()
 
         x_norm = norm_loss(x)
         if input_padding_mask is not None:
@@ -122,20 +117,12 @@ class TransformerEncoderWithPair(nn.Module):
 
         delta_pair_repr = attn_mask - input_attn_mask
         delta_pair_repr, _ = fill_attn_mask(delta_pair_repr, input_padding_mask, 0)
-        attn_mask = (
-            attn_mask.view(bsz, -1, seq_len, seq_len).permute(0, 2, 3, 1).contiguous()
-        )
-        delta_pair_repr = (
-            delta_pair_repr.view(bsz, -1, seq_len, seq_len)
-            .permute(0, 2, 3, 1)
-            .contiguous()
-        )
+        attn_mask = attn_mask.view(bsz, -1, seq_len, seq_len).permute(0, 2, 3, 1).contiguous()
+        delta_pair_repr = delta_pair_repr.view(bsz, -1, seq_len, seq_len).permute(0, 2, 3, 1).contiguous()
 
         pair_mask = token_mask[..., None] * token_mask[..., None, :]
         delta_pair_repr_norm = norm_loss(delta_pair_repr)
-        delta_pair_repr_norm = masked_mean(
-            pair_mask, delta_pair_repr_norm, dim=(-1, -2)
-        )
+        delta_pair_repr_norm = masked_mean(pair_mask, delta_pair_repr_norm, dim=(-1, -2))
 
         if self.final_head_layer_norm is not None:
             delta_pair_repr = self.final_head_layer_norm(delta_pair_repr)

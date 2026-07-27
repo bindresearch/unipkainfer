@@ -48,8 +48,7 @@ def download_unipka_model(
     checkpoints = tuple(sorted(destination.glob(CHECKPOINT_PATTERN)))
     if not checkpoints:
         raise RuntimeError(
-            f"No Uni-pKa checkpoints were downloaded from {UNIPKA_REPO_ID!r}. "
-            f"Expected files matching {CHECKPOINT_PATTERN!r}."
+            f"No Uni-pKa checkpoints were downloaded from {UNIPKA_REPO_ID!r}. Expected files matching {CHECKPOINT_PATTERN!r}."
         )
     return checkpoints
 
@@ -65,10 +64,7 @@ def _parser() -> argparse.ArgumentParser:
         "--output-folder",
         type=Path,
         default=None,
-        help=(
-            "Destination for fold_N/checkpoint_best.pt files "
-            f"(default: {default_model_dir()})."
-        ),
+        help=(f"Destination for fold_N/checkpoint_best.pt files (default: {default_model_dir()})."),
     )
     parser.add_argument(
         "--revision",

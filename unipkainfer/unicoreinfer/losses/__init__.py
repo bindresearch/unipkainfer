@@ -18,9 +18,7 @@ from ..losses.unicore_loss import (  # noqa
     build_loss_,
     register_loss,
     CRITERION_REGISTRY,
-) = registry.setup_registry(
-    "--loss", base_class=UnicoreLoss, default="cross_entropy"
-)
+) = registry.setup_registry("--loss", base_class=UnicoreLoss, default="cross_entropy")
 
 
 def build_loss(args, task):

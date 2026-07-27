@@ -15,5 +15,3 @@ class FromNumpyDataset(BaseWrapperDataset):
     @lru_cache(maxsize=16)
     def __getitem__(self, idx):
         return torch.from_numpy(self.dataset[idx])
-
-

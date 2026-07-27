@@ -13,7 +13,7 @@ try:
     import unicoreinfer_fused_rmsnorm_backward_gamma
 
     HAS_RMS_NORM = True
-except:
+except ImportError:
     print("fused_rms_norm is not installed corrected")
     HAS_RMS_NORM = False
 
@@ -28,9 +28,7 @@ class FusedRMSNormFastFunction(torch.autograd.Function):
         ctx.eps = eps
         input = input.contiguous()
         weight = weight.contiguous()
-        output, invvar = unicoreinfer_fused_rmsnorm.forward(
-            input, ctx.normalized_shape, weight, ctx.eps
-        )
+        output, invvar = unicoreinfer_fused_rmsnorm.forward(input, ctx.normalized_shape, weight, ctx.eps)
         ctx.save_for_backward(input, weight, invvar)
         return output
 
@@ -115,12 +113,7 @@ class RMSNorm(torch.nn.Module):
                 )
 
         self.func = (
-            torch_rms_norm
-            if (
-                not HAS_RMS_NORM
-                or normalized_shape[0] not in FUSED_RMS_NORM_SUPPORT_DIM
-            )
-            else fused_rms_norm
+            torch_rms_norm if (not HAS_RMS_NORM or normalized_shape[0] not in FUSED_RMS_NORM_SUPPORT_DIM) else fused_rms_norm
         )
 
     def reset_parameters(self):
@@ -130,6 +123,4 @@ class RMSNorm(torch.nn.Module):
         return self.func(input)
 
     def extra_repr(self):
-        return "{normalized_shape}, eps={eps}, " "elementwise_affine=True".format(
-            **self.__dict__
-        )
+        return "{normalized_shape}, eps={eps}, elementwise_affine=True".format(**self.__dict__)

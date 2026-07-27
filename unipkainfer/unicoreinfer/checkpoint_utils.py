@@ -11,7 +11,6 @@ import os
 import re
 import shutil
 import traceback
-from typing import Any, Dict, Optional
 
 import torch
 
@@ -29,7 +28,7 @@ def ckp_copy_fun(src, checkpoints, end_of_epoch, args):
                 logger.info("copy {} to {}".format(src, cp))
                 has_copy = True
                 shutil.copyfile(src, cp)
-        except:
+        except Exception:
             logger.info("copy failed, please copy it manaully")
 
     try:
@@ -40,9 +39,7 @@ def ckp_copy_fun(src, checkpoints, end_of_epoch, args):
         def remove_ckps(root_path):
             if not end_of_epoch and args.keep_interval_updates > 0:
                 # remove old checkpoints; checkpoints are sorted in descending order
-                checkpoints = checkpoint_paths(
-                    root_path, pattern=r"checkpoint_\d+_(\d+)\.pt"
-                )
+                checkpoints = checkpoint_paths(root_path, pattern=r"checkpoint_\d+_(\d+)\.pt")
                 for old_chk in checkpoints[args.keep_interval_updates :]:
                     if os.path.lexists(old_chk):
                         os.remove(old_chk)
@@ -50,9 +47,7 @@ def ckp_copy_fun(src, checkpoints, end_of_epoch, args):
 
             if args.keep_last_epochs >= 0:
                 # remove old epoch checkpoints; checkpoints are sorted in descending order
-                checkpoints = checkpoint_paths(
-                    root_path, pattern=r"checkpoint(\d+)\.pt"
-                )
+                checkpoints = checkpoint_paths(root_path, pattern=r"checkpoint(\d+)\.pt")
                 for old_chk in checkpoints[args.keep_last_epochs :]:
                     if os.path.lexists(old_chk):
                         os.remove(old_chk)
@@ -62,9 +57,7 @@ def ckp_copy_fun(src, checkpoints, end_of_epoch, args):
                 # only keep the best N checkpoints according to validation metric
                 checkpoints = checkpoint_paths(
                     root_path,
-                    pattern=r"checkpoint\.best_{}_(\d+\.?\d*)\.pt".format(
-                        args.best_checkpoint_metric
-                    ),
+                    pattern=r"checkpoint\.best_{}_(\d+\.?\d*)\.pt".format(args.best_checkpoint_metric),
                 )
                 if not args.maximize_best_checkpoint_metric:
                     checkpoints = checkpoints[::-1]
@@ -74,7 +67,7 @@ def ckp_copy_fun(src, checkpoints, end_of_epoch, args):
                         logger.info("removed {}".format(old_chk))
 
         remove_ckps(args.save_dir)
-    except:
+    except Exception:
         logger.info("remove old ckps error")
 
     logger.info("finished async ckp saving.")
@@ -113,47 +106,30 @@ def save_checkpoint(args, trainer, epoch_itr, val_loss, ckp_copy_thread, do_save
     suffix = trainer.checkpoint_suffix
     checkpoint_conds = collections.OrderedDict()
     checkpoint_conds["checkpoint{}{}.pt".format(epoch, suffix)] = (
-        end_of_epoch
-        and not args.no_epoch_checkpoints
-        and epoch % args.save_interval == 0
+        end_of_epoch and not args.no_epoch_checkpoints and epoch % args.save_interval == 0
     )
     checkpoint_conds["checkpoint_{}_{}{}.pt".format(epoch, updates, suffix)] = (
-        not end_of_epoch
-        and args.save_interval_updates > 0
-        and updates % args.save_interval_updates == 0
+        not end_of_epoch and args.save_interval_updates > 0 and updates % args.save_interval_updates == 0
     )
     checkpoint_conds["checkpoint_best{}.pt".format(suffix)] = val_loss is not None and (
-        not hasattr(save_checkpoint, "best")
-        or is_better(val_loss, save_checkpoint.best)
+        not hasattr(save_checkpoint, "best") or is_better(val_loss, save_checkpoint.best)
     )
     if val_loss is not None and args.keep_best_checkpoints > 0:
-        checkpoint_conds[
-            "checkpoint.best_{}_{:.2f}.pt".format(args.best_checkpoint_metric, val_loss)
-        ] = not hasattr(save_checkpoint, "best") or is_better(
-            val_loss, save_checkpoint.best
-        )
-    checkpoint_conds["checkpoint_last{}.pt".format(suffix)] = (
-        not args.no_last_checkpoints
-    )
+        checkpoint_conds["checkpoint.best_{}_{:.2f}.pt".format(args.best_checkpoint_metric, val_loss)] = not hasattr(
+            save_checkpoint, "best"
+        ) or is_better(val_loss, save_checkpoint.best)
+    checkpoint_conds["checkpoint_last{}.pt".format(suffix)] = not args.no_last_checkpoints
 
     extra_state = {"train_iterator": epoch_itr.state_dict(), "val_loss": val_loss}
     if hasattr(save_checkpoint, "best"):
         extra_state.update({"best": save_checkpoint.best})
 
-    checkpoints = [
-        os.path.join(args.save_dir, fn) for fn, cond in checkpoint_conds.items() if cond
-    ]
-    tmp_checkpoints = [
-        os.path.join(args.tmp_save_dir, fn)
-        for fn, cond in checkpoint_conds.items()
-        if cond
-    ]
+    checkpoints = [os.path.join(args.save_dir, fn) for fn, cond in checkpoint_conds.items() if cond]
+    tmp_checkpoints = [os.path.join(args.tmp_save_dir, fn) for fn, cond in checkpoint_conds.items() if cond]
     if len(checkpoints) > 0:
         trainer.save_checkpoint(tmp_checkpoints[0], extra_state)
         if ckp_copy_thread is not None:
-            ckp_copy_thread.apply_async(
-                ckp_copy_fun, (tmp_checkpoints[0], checkpoints, end_of_epoch, args)
-            )
+            ckp_copy_thread.apply_async(ckp_copy_fun, (tmp_checkpoints[0], checkpoints, end_of_epoch, args))
         write_timer.stop()
         logger.info(
             "Saved checkpoint {} (epoch {} @ {} updates, score {}) (writing took {} seconds)".format(
@@ -176,21 +152,15 @@ def load_checkpoint(args, trainer, **passthrough_args):
     reset_meters = args.reset_meters
     reset_dataloader = args.reset_dataloader
 
-    if args.finetune_from_model is not None and (
-        reset_optimizer or reset_lr_scheduler or reset_meters or reset_dataloader
-    ):
+    if args.finetune_from_model is not None and (reset_optimizer or reset_lr_scheduler or reset_meters or reset_dataloader):
         raise ValueError(
             "--finetune-from-model can not be set together with either --reset-optimizer"
             " or reset_lr_scheduler or reset_meters or reset_dataloader"
         )
 
     suffix = trainer.checkpoint_suffix
-    if (
-        args.restore_file == "checkpoint_last.pt"
-    ):  # default value of restore_file is 'checkpoint_last.pt'
-        checkpoint_path = os.path.join(
-            args.save_dir, "checkpoint_last{}.pt".format(suffix)
-        )
+    if args.restore_file == "checkpoint_last.pt":  # default value of restore_file is 'checkpoint_last.pt'
+        checkpoint_path = os.path.join(args.save_dir, "checkpoint_last{}.pt".format(suffix))
         first_launch = not os.path.exists(checkpoint_path)
         if args.finetune_from_model is not None and first_launch:
             # if there is no last checkpoint to restore, start the finetune from pretrained model
@@ -206,9 +176,7 @@ def load_checkpoint(args, trainer, **passthrough_args):
                     "optimizer, lr scheduler, meters, dataloader will be reset"
                 )
             else:
-                raise ValueError(
-                    f"--funetune-from-model {args.finetune_from_model} does not exist"
-                )
+                raise ValueError(f"--funetune-from-model {args.finetune_from_model} does not exist")
     elif suffix is not None:
         checkpoint_path = args.restore_file.replace(".pt", suffix + ".pt")
     else:
@@ -216,8 +184,7 @@ def load_checkpoint(args, trainer, **passthrough_args):
 
     if args.restore_file != "checkpoint_last.pt" and args.finetune_from_model:
         raise ValueError(
-            "--finetune-from-model and --restore-file (non-default value) "
-            "can not be specified together: " + str(args)
+            "--finetune-from-model and --restore-file (non-default value) can not be specified together: " + str(args)
         )
 
     extra_state, epoch_itr = trainer.load_checkpoint(
@@ -230,12 +197,7 @@ def load_checkpoint(args, trainer, **passthrough_args):
         **passthrough_args,
     )
 
-    if (
-        extra_state is not None
-        and "best" in extra_state
-        and not reset_optimizer
-        and not reset_meters
-    ):
+    if extra_state is not None and "best" in extra_state and not reset_optimizer and not reset_meters:
         save_checkpoint.best = extra_state["best"]
 
     return extra_state, epoch_itr
@@ -305,9 +267,7 @@ def verify_checkpoint_directory(save_dir: str) -> None:
         with open(temp_file_path, "w"):
             pass
     except OSError as e:
-        logger.warning(
-            "Unable to access checkpoint save directory: {}".format(save_dir)
-        )
+        logger.warning("Unable to access checkpoint save directory: {}".format(save_dir))
         raise e
     else:
         os.remove(temp_file_path)

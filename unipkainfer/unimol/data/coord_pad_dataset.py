@@ -35,6 +35,4 @@ class RightPadDatasetCoord(BaseWrapperDataset):
         self.left_pad = left_pad
 
     def collater(self, samples):
-        return collate_tokens_coords(
-            samples, self.pad_idx, left_pad=self.left_pad, pad_to_multiple=8
-        )
+        return collate_tokens_coords(samples, self.pad_idx, left_pad=self.left_pad, pad_to_multiple=8)

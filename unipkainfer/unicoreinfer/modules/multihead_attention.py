@@ -2,7 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, Optional
+from typing import Optional
 
 import torch
 from torch import Tensor, nn
@@ -25,9 +25,7 @@ class SelfMultiheadAttention(nn.Module):
         self.dropout = dropout
 
         self.head_dim = embed_dim // num_heads
-        assert (
-            self.head_dim * num_heads == self.embed_dim
-        ), "embed_dim must be divisible by num_heads"
+        assert self.head_dim * num_heads == self.embed_dim, "embed_dim must be divisible by num_heads"
         self.scaling = (self.head_dim * scaling_factor) ** -0.5
 
         self.in_proj = nn.Linear(embed_dim, embed_dim * 3, bias=bias)
@@ -87,30 +85,29 @@ class SelfMultiheadAttention(nn.Module):
         if key_padding_mask is not None:
             # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
-            attn_weights.masked_fill_(
-                key_padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool), float("-inf")
-            )
+            attn_weights.masked_fill_(key_padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool), float("-inf"))
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         if not return_attn:
             attn = softmax_dropout(
-                attn_weights, self.dropout, self.training, bias=attn_bias,
+                attn_weights,
+                self.dropout,
+                self.training,
+                bias=attn_bias,
             )
         else:
             attn_weights += attn_bias
             attn = softmax_dropout(
-                attn_weights, self.dropout, self.training, inplace=False,
+                attn_weights,
+                self.dropout,
+                self.training,
+                inplace=False,
             )
 
         o = torch.bmm(attn, v)
         assert list(o.size()) == [bsz * self.num_heads, tgt_len, self.head_dim]
 
-        o = (
-            o.view(bsz, self.num_heads, tgt_len, self.head_dim)
-            .transpose(1, 2)
-            .contiguous()
-            .view(bsz, tgt_len, embed_dim)
-        )
+        o = o.view(bsz, self.num_heads, tgt_len, self.head_dim).transpose(1, 2).contiguous().view(bsz, tgt_len, embed_dim)
         o = self.out_proj(o)
         if not return_attn:
             return o
@@ -134,9 +131,7 @@ class CrossMultiheadAttention(nn.Module):
         self.dropout = dropout
 
         self.head_dim = embed_dim // num_heads
-        assert (
-            self.head_dim * num_heads == self.embed_dim
-        ), "embed_dim must be divisible by num_heads"
+        assert self.head_dim * num_heads == self.embed_dim, "embed_dim must be divisible by num_heads"
         self.scaling = (self.head_dim * scaling_factor) ** -0.5
 
         self.q_proj = nn.Linear(embed_dim, embed_dim, bias=bias)
@@ -202,9 +197,7 @@ class CrossMultiheadAttention(nn.Module):
         if key_padding_mask is not None:
             # don't attend to padding symbols
             attn_weights = attn_weights.view(bsz, self.num_heads, tgt_len, src_len)
-            attn_weights.masked_fill_(
-                key_padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool), float("-inf")
-            )
+            attn_weights.masked_fill_(key_padding_mask.unsqueeze(1).unsqueeze(2).to(torch.bool), float("-inf"))
             attn_weights = attn_weights.view(bsz * self.num_heads, tgt_len, src_len)
 
         attn = softmax_dropout(attn_weights, self.dropout, self.training, bias=attn_bias)
@@ -212,11 +205,6 @@ class CrossMultiheadAttention(nn.Module):
         o = torch.bmm(attn, v)
         assert list(o.size()) == [bsz * self.num_heads, tgt_len, self.head_dim]
 
-        o = (
-            o.view(bsz, self.num_heads, tgt_len, self.head_dim)
-            .transpose(1, 2)
-            .contiguous()
-            .view(bsz, tgt_len, embed_dim)
-        )
+        o = o.view(bsz, self.num_heads, tgt_len, self.head_dim).transpose(1, 2).contiguous().view(bsz, tgt_len, embed_dim)
         o = self.out_proj(o)
         return o

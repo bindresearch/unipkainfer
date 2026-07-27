@@ -9,6 +9,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
 class Dictionary:
     """A mapping from symbols to consecutive integers"""
 
@@ -55,7 +56,7 @@ class Dictionary:
         if sym in self.indices:
             return self.indices[sym]
         return self.indices[self.unk_word]
-    
+
     def special_index(self):
         return [self.index(x) for x in self.specials]
 
@@ -116,10 +117,7 @@ class Dictionary:
             except FileNotFoundError as fnfe:
                 raise fnfe
             except UnicodeError:
-                raise Exception(
-                    "Incorrect encoding detected in {}, please "
-                    "rebuild the dataset".format(f)
-                )
+                raise Exception("Incorrect encoding detected in {}, please rebuild the dataset".format(f))
             return
 
         lines = f.readlines()
@@ -143,6 +141,4 @@ class Dictionary:
                 else:
                     self.add_symbol(word, n=count, overwrite=overwrite)
             except ValueError:
-                raise ValueError(
-                    "Incorrect dictionary format, expected '<token> <cnt> [flags]'"
-                )
+                raise ValueError("Incorrect dictionary format, expected '<token> <cnt> [flags]'")

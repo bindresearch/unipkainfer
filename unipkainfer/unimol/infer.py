@@ -21,9 +21,7 @@ logger = logging.getLogger(__name__)
 
 def main(args):
 
-    assert (
-        args.batch_size is not None
-    ), "Must specify batch size either with --batch-size"
+    assert args.batch_size is not None, "Must specify batch size either with --batch-size"
 
     use_fp16 = args.fp16
     use_cuda = torch.cuda.is_available() and not args.cpu

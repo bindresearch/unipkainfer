@@ -33,10 +33,7 @@ def infer_init_method(args, force_distributed=False):
     if args.distributed_init_method is not None:
         return
 
-    if all(
-        key in os.environ
-        for key in ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK"]
-    ):
+    if all(key in os.environ for key in ["MASTER_ADDR", "MASTER_PORT", "WORLD_SIZE", "RANK"]):
         # support torch.distributed.launch
         _infer_torch_distributed_launch_init(args)
     elif args.distributed_port > 0:
@@ -47,9 +44,7 @@ def infer_init_method(args, force_distributed=False):
         _infer_single_node_init(args)
 
     elif not args.distributed_no_spawn:
-        args.distributed_num_procs = min(
-            torch.cuda.device_count(), args.distributed_world_size
-        )
+        args.distributed_num_procs = min(torch.cuda.device_count(), args.distributed_world_size)
 
 
 def _infer_torch_distributed_launch_init(args):
@@ -66,9 +61,7 @@ def _infer_slurm_init(args):
         node_list = os.environ.get("SLURM_JOB_NODELIST")
     if node_list is not None:
         try:
-            hostnames = subprocess.check_output(
-                ["scontrol", "show", "hostnames", node_list]
-            )
+            hostnames = subprocess.check_output(["scontrol", "show", "hostnames", node_list])
             args.distributed_init_method = "tcp://{host}:{port}".format(
                 host=hostnames.split()[0].decode("utf-8"),
                 port=args.distributed_port,
@@ -99,9 +92,9 @@ def _infer_slurm_init(args):
 
 
 def _infer_single_node_init(args):
-    assert (
-        args.distributed_world_size <= torch.cuda.device_count()
-    ), f"world size is {args.distributed_world_size} but have {torch.cuda.device_count()} available devices"
+    assert args.distributed_world_size <= torch.cuda.device_count(), (
+        f"world size is {args.distributed_world_size} but have {torch.cuda.device_count()} available devices"
+    )
     port = random.randint(10000, 20000)
     args.distributed_init_method = "tcp://localhost:{port}".format(port=port)
 
@@ -262,9 +255,7 @@ def all_gather(tensor, group, return_tensor=False):
     """Perform an all-gather operation."""
     world_size = get_world_size(group=group)
     rank = get_rank(group=group)
-    tensor_list = [
-        tensor if i == rank else torch.empty_like(tensor) for i in range(world_size)
-    ]
+    tensor_list = [tensor if i == rank else torch.empty_like(tensor) for i in range(world_size)]
     dist.all_gather(tensor_list, tensor, group=group)
     if return_tensor:
         return torch.stack(tensor_list, dim=0)
@@ -293,10 +284,7 @@ def all_gather_list(data, group=None, max_size=16384):
     world_size = get_world_size(group=group)
 
     buffer_size = max_size * world_size
-    if (
-        not hasattr(all_gather_list, "_buffer")
-        or all_gather_list._buffer.numel() < buffer_size
-    ):
+    if not hasattr(all_gather_list, "_buffer") or all_gather_list._buffer.numel() < buffer_size:
         all_gather_list._buffer = torch.tensor(
             data=[0] * buffer_size,  # Initialize with zeros
             dtype=torch.uint8,  # Byte tensor corresponds to uint8
@@ -313,9 +301,7 @@ def all_gather_list(data, group=None, max_size=16384):
     header_size = 4  # size of header that contains the length of the encoded data
     size = header_size + enc_size
     if size > max_size:
-        raise ValueError(
-            "encoded data size ({}) exceeds max_size ({})".format(size, max_size)
-        )
+        raise ValueError("encoded data size ({}) exceeds max_size ({})".format(size, max_size))
 
     header = struct.pack(">I", enc_size)
     cpu_buffer[:size] = torch.ByteTensor(list(header + enc))
@@ -331,11 +317,7 @@ def all_gather_list(data, group=None, max_size=16384):
             out_buffer = buffer[i * max_size : (i + 1) * max_size]
             (enc_size,) = struct.unpack(">I", bytes(out_buffer[:header_size].tolist()))
             if enc_size > 0:
-                result.append(
-                    pickle.loads(
-                        bytes(out_buffer[header_size : header_size + enc_size].tolist())
-                    )
-                )
+                result.append(pickle.loads(bytes(out_buffer[header_size : header_size + enc_size].tolist())))
         return result
     except pickle.UnpicklingError:
         raise Exception(
@@ -422,9 +404,7 @@ def broadcast_tensors(
     # share metadata first to simplify transfer
     is_src_rank = get_rank(group) == src_rank
     if is_src_rank:
-        metadata = [
-            {"size": t.size(), "dtype": t.dtype, "device": t.device} for t in tensors
-        ]
+        metadata = [{"size": t.size(), "dtype": t.dtype, "device": t.device} for t in tensors]
         metadata = _broadcast_object_slow(metadata, src_rank, group, dist_device)
     else:
         metadata = _broadcast_object_slow(None, src_rank, group, dist_device)
@@ -435,9 +415,7 @@ def broadcast_tensors(
             tensor = tensors[i]
             broadcast(tensors[i].to(dist_device), src=src_rank, group=group)
         else:
-            tensor = torch.zeros(
-                [meta["size"].numel()], dtype=meta["dtype"], device=dist_device
-            )
+            tensor = torch.zeros([meta["size"].numel()], dtype=meta["dtype"], device=dist_device)
             broadcast(tensor, src=src_rank, group=group)
         tensor = tensor.view(meta["size"]).to(meta["device"])
         out_tensors.append(tensor)

@@ -30,9 +30,10 @@ class RightPadDataset(PadDataset):
 
 
 class RightPadDataset2D(BaseWrapperDataset):
-    def __init__(self, dataset, pad_idx,left_pad=False):
+    def __init__(self, dataset, pad_idx, left_pad=False):
         super().__init__(dataset)
         self.pad_idx = pad_idx
         self.left_pad = left_pad
+
     def collater(self, samples):
         return data_utils.collate_tokens_2d(samples, self.pad_idx, left_pad=self.left_pad, pad_to_multiple=8)

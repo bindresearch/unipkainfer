@@ -97,9 +97,7 @@ def predict_pkas_from_smiles(
 
     with tempfile.TemporaryDirectory() as tmpdir:
         input_path = Path(tmpdir) / f"{task}.tsv"
-        pd.DataFrame(
-            [{"SMILES": reaction_smiles, "TARGET": target}]
-        ).to_csv(input_path, index=False, sep="\t")
+        pd.DataFrame([{"SMILES": reaction_smiles, "TARGET": target}]).to_csv(input_path, index=False, sep="\t")
         return predict_pkas(input_path, task_name=task, config=config)
 
 
@@ -219,10 +217,7 @@ def _missing_checkpoint_message(checkpoint: Path, model_dir: str | Path) -> str:
     else:
         output_folder = shlex.quote(str(destination))
         download_command = f"unipka-download-model --output-folder {output_folder}"
-    return (
-        f"Missing Uni-pKa checkpoint: {checkpoint}. Download the model weights with "
-        f"`{download_command}`."
-    )
+    return f"Missing Uni-pKa checkpoint: {checkpoint}. Download the model weights with `{download_command}`."
 
 
 def _read_results(results_dir: Path, fold: int, task_name: str) -> pd.DataFrame:

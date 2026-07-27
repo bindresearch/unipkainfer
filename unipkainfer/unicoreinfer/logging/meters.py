@@ -267,13 +267,7 @@ class MetersDict(OrderedDict):
 
     def get_smoothed_values(self) -> Dict[str, float]:
         """Get all smoothed values."""
-        return OrderedDict(
-            [
-                (key, self.get_smoothed_value(key))
-                for key in self.keys()
-                if not key.startswith("_")
-            ]
-        )
+        return OrderedDict([(key, self.get_smoothed_value(key)) for key in self.keys() if not key.startswith("_")])
 
     def reset(self):
         """Reset Meter instances."""

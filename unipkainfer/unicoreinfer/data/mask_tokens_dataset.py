@@ -14,7 +14,6 @@ from . import BaseWrapperDataset, LRUCacheDataset
 
 
 class MaskTokensDataset(BaseWrapperDataset):
-
     @classmethod
     def apply_mask(cls, dataset: torch.utils.data.Dataset, *args, **kwargs):
         """Return the source and target datasets for masked LM training."""
@@ -76,9 +75,7 @@ class MaskTokensDataset(BaseWrapperDataset):
             sz = len(item)
             # don't allow empty sequence
             assert sz > 2
-            assert (
-                self.mask_idx not in item
-            ), "Dataset contains mask_idx (={}), this is not expected!".format(
+            assert self.mask_idx not in item, "Dataset contains mask_idx (={}), this is not expected!".format(
                 self.mask_idx,
             )
 

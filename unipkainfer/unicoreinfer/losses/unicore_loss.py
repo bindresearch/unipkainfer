@@ -5,9 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import inspect
-from typing import Any, Dict, List
 
-from .. import metrics, utils
 from torch.nn.modules.loss import _Loss
 
 
@@ -31,11 +29,7 @@ class UnicoreLoss(_Loss):
         # arguments in the __init__.
         init_args = {}
         for p in inspect.signature(cls).parameters.values():
-            if (
-                p.kind == p.POSITIONAL_ONLY
-                or p.kind == p.VAR_POSITIONAL
-                or p.kind == p.VAR_KEYWORD
-            ):
+            if p.kind == p.POSITIONAL_ONLY or p.kind == p.VAR_POSITIONAL or p.kind == p.VAR_KEYWORD:
                 # we haven't implemented inference for these argument types,
                 # but PRs welcome :)
                 raise NotImplementedError("{} not supported".format(p.kind))
@@ -52,8 +46,7 @@ class UnicoreLoss(_Loss):
                 pass  # we'll use the default value
             else:
                 raise NotImplementedError(
-                    "Unable to infer Loss arguments, please implement "
-                    "{}.build_loss".format(cls.__name__)
+                    "Unable to infer Loss arguments, please implement {}.build_loss".format(cls.__name__)
                 )
         return cls(**init_args)
 
@@ -75,4 +68,3 @@ class UnicoreLoss(_Loss):
         to True will improves distributed training speed.
         """
         return False
-

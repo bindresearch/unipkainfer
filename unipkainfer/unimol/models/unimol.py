@@ -5,12 +5,10 @@
 import logging
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from ...unicoreinfer import utils
 from ...unicoreinfer.models import BaseUnicoreModel, register_model, register_model_architecture
-from ...unicoreinfer.modules import LayerNorm, init_bert_params
+from ...unicoreinfer.modules import init_bert_params
 from .transformer_encoder_with_pair import TransformerEncoderWithPair
-from typing import Dict, Any, List
 
 
 logger = logging.getLogger(__name__)
@@ -21,9 +19,7 @@ class UniMolModel(BaseUnicoreModel):
     @staticmethod
     def add_args(parser):
         """Add model-specific arguments to the parser."""
-        parser.add_argument(
-            "--encoder-layers", type=int, metavar="L", help="num encoder layers"
-        )
+        parser.add_argument("--encoder-layers", type=int, metavar="L", help="num encoder layers")
         parser.add_argument(
             "--encoder-embed-dim",
             type=int,
@@ -58,9 +54,7 @@ class UniMolModel(BaseUnicoreModel):
             metavar="D",
             help="dropout probability for embeddings",
         )
-        parser.add_argument(
-            "--dropout", type=float, metavar="D", help="dropout probability"
-        )
+        parser.add_argument("--dropout", type=float, metavar="D", help="dropout probability")
         parser.add_argument(
             "--attention-dropout",
             type=float,
@@ -79,12 +73,8 @@ class UniMolModel(BaseUnicoreModel):
             metavar="D",
             help="dropout probability in the masked_lm pooler layers",
         )
-        parser.add_argument(
-            "--max-seq-len", type=int, help="number of positional embeddings to learn"
-        )
-        parser.add_argument(
-            "--post-ln", type=bool, help="use post layernorm or pre layernorm"
-        )
+        parser.add_argument("--max-seq-len", type=int, help="number of positional embeddings to learn")
+        parser.add_argument("--post-ln", type=bool, help="use post layernorm or pre layernorm")
         parser.add_argument(
             "--x-norm-loss",
             type=float,
@@ -110,12 +100,8 @@ class UniMolModel(BaseUnicoreModel):
         self.args = args
         self.padding_idx = dictionary.pad()
         self.charge_padding_idx = charge_dictionary.pad()
-        self.embed_tokens = nn.Embedding(
-            len(dictionary), args.encoder_embed_dim, self.padding_idx
-        )
-        self.embed_charges = nn.Embedding(
-            len(charge_dictionary), args.encoder_embed_dim, self.charge_padding_idx
-        )
+        self.embed_tokens = nn.Embedding(len(dictionary), args.encoder_embed_dim, self.padding_idx)
+        self.embed_charges = nn.Embedding(len(charge_dictionary), args.encoder_embed_dim, self.charge_padding_idx)
         self._num_updates = None
         self.encoder = TransformerEncoderWithPair(
             encoder_layers=args.encoder_layers,
@@ -133,9 +119,7 @@ class UniMolModel(BaseUnicoreModel):
 
         K = 128
         n_edge_type = len(dictionary) * len(dictionary)
-        self.gbf_proj = NonLinearHead(
-            K, args.encoder_attention_heads, args.activation_fn
-        )
+        self.gbf_proj = NonLinearHead(K, args.encoder_attention_heads, args.activation_fn)
         self.gbf = GaussianLayer(K, n_edge_type)
 
         self.classification_heads = nn.ModuleDict()
@@ -155,7 +139,7 @@ class UniMolModel(BaseUnicoreModel):
         src_edge_type,
         encoder_masked_tokens=None,
         classification_head_name=None,
-        **kwargs
+        **kwargs,
     ):
 
         padding_mask = src_tokens.eq(self.padding_idx)
@@ -191,26 +175,23 @@ class UniMolModel(BaseUnicoreModel):
 
         if classification_head_name is not None:
             logits = self.classification_heads[classification_head_name](encoder_rep)
-        if self.args.mode == 'infer':
+        if self.args.mode == "infer":
             return encoder_rep, encoder_pair_rep
         else:
             return (
                 logits,
                 x_norm,
                 delta_encoder_pair_rep_norm,
-            )         
+            )
 
-    def register_classification_head(
-        self, name, num_classes=None, inner_dim=None, **kwargs
-    ):
+    def register_classification_head(self, name, num_classes=None, inner_dim=None, **kwargs):
         """Register a classification head."""
         if name in self.classification_heads:
             prev_num_classes = self.classification_heads[name].out_proj.out_features
             prev_inner_dim = self.classification_heads[name].dense.out_features
             if num_classes != prev_num_classes or inner_dim != prev_inner_dim:
                 logger.warning(
-                    're-registering head "{}" with num_classes {} (prev: {}) '
-                    "and inner_dim {} (prev: {})".format(
+                    're-registering head "{}" with num_classes {} (prev: {}) and inner_dim {} (prev: {})'.format(
                         name, num_classes, prev_num_classes, inner_dim, prev_inner_dim
                     )
                 )
