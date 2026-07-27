@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Standalone CPU and GPU inference runtime for Uni-pKa"
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
-license = { file = "unipkainfer/LICENSE" }
+license = { file = "LICENSE" }
 maintainers = [
     { name = "Bind Research" },
     { name = "Soeren von Buelow", email = "soeren.buelow@bindresearch.org" },
@@ -16,7 +16,7 @@ maintainers = [
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache-2.0 AND MIT License",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",

@@ -5,6 +5,10 @@ and the minimal pure-Python Uni-Core runtime they require. It supports CPU and
 single-GPU inference through PyTorch and does not build Uni-Core's optional
 fused CUDA extensions.
 
+This distribution contains code derived from Uni-pKa (Apache-2.0 License), and code derived from Uni-Mol (MIT License) and Uni-Core (MIT Liecnes). Copyright and license notices are preserved in the accompanying license and third-party notice files.
+
+The original repositories are [Uni-pKa + Uni-Mol](https://github.com/dptech-corp/Uni-pKa) and [Uni-Core](https://github.com/dptech-corp/Uni-Core) from dptech-corp.
+
 ## Installation
 
 ```bash
