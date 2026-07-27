@@ -60,6 +60,9 @@ include = ["unipkainfer*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+filterwarnings = [
+    'ignore::DeprecationWarning:torch\.jit\._script',
+]
 
 [tool.ruff]
 line-length = 127
