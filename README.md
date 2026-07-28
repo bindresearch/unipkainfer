@@ -16,20 +16,27 @@ third-party notice files.
 
 ```bash
 python -m pip install unipkainfer
-unipka-download-model
 ```
 
-By default, model checkpoints are downloaded to the user data directory.
-On Linux this is normally:
+The selected model fold is downloaded from Hugging Face on first use and
+verified by its SHA-256 checksum. The default is fold 1. Checkpoints are cached
+in the user data directory, normally:
 
 ```text
 ~/.local/share/unipkainfer/models
 ```
 
-Choose another location when needed:
+The download can be prepared ahead of time, for example when building a
+container:
 
 ```bash
-unipka-download-model --output-folder /path/to/models
+unipka-download-model --fold 1
+```
+
+Use multiple values to prefetch several folds:
+
+```bash
+unipka-download-model --fold 0 1 2 3 4 --output-folder /path/to/models
 ```
 
 ## Python API
@@ -41,9 +48,9 @@ from unipkainfer import predict_standard_free_energy
 free_energy = predict_standard_free_energy(Chem.MolFromSmiles("CCO"))
 ```
 
-Use `UnipkaFreeEnergyConfig(model_dir=...)` to override the default model
-location. A CUDA-enabled PyTorch installation and compatible NVIDIA driver are
-required for GPU inference.
+Use `UnipkaFreeEnergyConfig(folds=...)` to select folds and `model_dir=...` to
+override the cache location. A CUDA-enabled PyTorch installation and compatible
+NVIDIA driver are required for GPU inference.
 
 See `THIRD_PARTY_NOTICES.md`, `unipkainfer/unicoreinfer/UPSTREAM.md`, and the
 included licenses for upstream provenance.

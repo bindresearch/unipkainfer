@@ -26,7 +26,7 @@ def test_vendored_runtime_uses_only_package_qualified_names():
 def test_legacy_predictor_calls_vendored_inference_directly(monkeypatch, tmp_path):
     infer = pytest.importorskip("unipkainfer.unimol.infer")
     model_dir = tmp_path / "models"
-    checkpoint = model_dir / "fold_0" / "checkpoint_best.pt"
+    checkpoint = model_dir / "fold_1" / "checkpoint_best.pt"
     checkpoint.parent.mkdir(parents=True)
     checkpoint.touch()
     captured = {}
@@ -38,6 +38,10 @@ def test_legacy_predictor_calls_vendored_inference_directly(monkeypatch, tmp_pat
     monkeypatch.setattr(
         "unipkainfer.pka_predictor.api.torch.cuda.is_available",
         lambda: False,
+    )
+    monkeypatch.setattr(
+        "unipkainfer.pka_predictor.api.ensure_checkpoint",
+        lambda configured_model_dir, fold: checkpoint,
     )
 
     _run_inference(

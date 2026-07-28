@@ -163,7 +163,7 @@ def test_aggregate_fold_free_energy_predictions_averages_folds_by_input_order():
 
 
 def test_free_energy_config_defaults_to_one_fold():
-    assert UnipkaFreeEnergyConfig().folds == (0,)
+    assert UnipkaFreeEnergyConfig().folds == (1,)
 
 
 def test_free_energy_config_accepts_single_fold_without_trailing_comma():
@@ -251,9 +251,9 @@ def test_predict_standard_free_energies_runs_only_configured_default_fold(monkey
         ),
     )
 
-    assert loaded_folds == [0]
-    assert predicted_folds == [0]
-    assert results["standard_free_energy"].tolist() == [0.0]
+    assert loaded_folds == [1]
+    assert predicted_folds == [1]
+    assert results["standard_free_energy"].tolist() == [1.0]
 
 
 def test_predict_standard_free_energies_deduplicates_smiles_and_reuses_runner(monkeypatch, tmp_path):

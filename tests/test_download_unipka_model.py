@@ -1,98 +1,79 @@
-from pathlib import Path
-
 import pytest
 
-import download_model as downloader
-from unipkainfer.pka_predictor.api import _missing_checkpoint_message
+from unipkainfer import models
+from unipkainfer import download_model as downloader
 
 
-def test_downloads_fold_checkpoints_to_required_output_folder(
-    monkeypatch,
-    tmp_path,
-):
-    captured = {}
-    output_folder = tmp_path / "models"
+def test_model_manager_preserves_fold_subdirectories(tmp_path):
+    manager = models._model_manager(tmp_path / "models")
 
-    def mock_snapshot_download(**kwargs):
-        captured.update(kwargs)
-        checkpoint = Path(kwargs["local_dir"]) / "fold_3" / "checkpoint_best.pt"
-        checkpoint.parent.mkdir(parents=True)
-        checkpoint.write_bytes(b"checkpoint")
-        return str(kwargs["local_dir"])
-
-    monkeypatch.setattr(downloader, "_snapshot_download", mock_snapshot_download)
-
-    result = downloader.download_unipka_model(
-        output_folder,
-        revision="release-1",
-        force_download=True,
-    )
-
-    assert result == (output_folder / "fold_3" / "checkpoint_best.pt",)
-    assert captured == {
-        "repo_id": "bindresearch/pkasso_unipka",
-        "revision": "release-1",
-        "local_dir": output_folder,
-        "allow_patterns": ["fold_*/checkpoint_best.pt"],
-        "force_download": True,
+    assert manager.path == (tmp_path / "models").resolve()
+    assert manager.base_url.endswith(f"/resolve/{models.MODEL_REVISION}/")
+    assert set(manager.registry) == {
+        f"fold_{fold}/checkpoint_best.pt" for fold in models.AVAILABLE_FOLDS
     }
 
 
-def test_uses_default_user_data_model_folder(monkeypatch, tmp_path):
-    default_folder = tmp_path / "user-data" / "models"
+def test_ensure_checkpoint_fetches_only_requested_fold(monkeypatch, tmp_path):
+    captured = {}
+    checkpoint = tmp_path / "models" / "fold_1" / "checkpoint_best.pt"
+
+    class FakeManager:
+        def fetch(self, name, *, progressbar):
+            captured.update(name=name, progressbar=progressbar)
+            return str(checkpoint)
+
+    monkeypatch.setattr(models, "_model_manager", lambda model_dir: FakeManager())
+
+    result = models.ensure_checkpoint(tmp_path / "models", 1)
+
+    assert result == checkpoint
+    assert captured == {
+        "name": "fold_1/checkpoint_best.pt",
+        "progressbar": True,
+    }
+
+
+def test_ensure_checkpoint_rejects_unknown_fold(tmp_path):
+    with pytest.raises(ValueError, match="Unknown Uni-pKa fold 5"):
+        models.ensure_checkpoint(tmp_path, 5)
+
+
+def test_prefetch_command_defaults_to_fold_one(monkeypatch, tmp_path):
+    captured = {}
+    checkpoint = tmp_path / "models" / "fold_1" / "checkpoint_best.pt"
+
+    def mock_prefetch(folds, *, model_dir, progressbar=True):
+        captured.update(folds=tuple(folds), model_dir=model_dir)
+        return (checkpoint,)
+
+    monkeypatch.setattr(downloader, "prefetch_checkpoints", mock_prefetch)
+
+    result = downloader.download_unipka_model(tmp_path / "models")
+
+    assert result == (checkpoint,)
+    assert captured == {
+        "folds": (1,),
+        "model_dir": tmp_path / "models",
+    }
+
+
+def test_prefetch_command_accepts_selected_folds(monkeypatch, tmp_path):
     captured = {}
 
-    monkeypatch.setattr(downloader, "default_model_dir", lambda: default_folder)
+    def mock_download(output_folder, *, folds):
+        captured.update(output_folder=output_folder, folds=tuple(folds))
+        return tuple(
+            tmp_path / "models" / f"fold_{fold}" / "checkpoint_best.pt"
+            for fold in folds
+        )
 
-    def mock_snapshot_download(**kwargs):
-        captured.update(kwargs)
-        checkpoint = Path(kwargs["local_dir"]) / "fold_0" / "checkpoint_best.pt"
-        checkpoint.parent.mkdir(parents=True)
-        checkpoint.touch()
-        return str(kwargs["local_dir"])
+    monkeypatch.setattr(downloader, "download_unipka_model", mock_download)
 
-    monkeypatch.setattr(downloader, "_snapshot_download", mock_snapshot_download)
-
-    result = downloader.download_unipka_model()
-
-    assert result == (default_folder / "fold_0" / "checkpoint_best.pt",)
-    assert captured["local_dir"] == default_folder
-
-
-def test_fails_if_repository_contains_no_expected_checkpoints(
-    monkeypatch,
-    tmp_path,
-):
-    monkeypatch.setattr(
-        downloader,
-        "_snapshot_download",
-        lambda **kwargs: str(kwargs["local_dir"]),
-    )
-
-    with pytest.raises(RuntimeError, match="No Uni-pKa checkpoints"):
-        downloader.download_unipka_model(tmp_path)
-
-
-def test_missing_checkpoint_message_recommends_downloader_for_model_folder():
-    message = _missing_checkpoint_message(
-        Path("/models/with spaces/fold_3/checkpoint_best.pt"),
-        Path("/models/with spaces"),
-    )
-
-    assert "unipka-download-model --output-folder '/models/with spaces'" in message
-
-
-def test_missing_default_checkpoint_message_uses_short_command(monkeypatch, tmp_path):
-    model_dir = tmp_path / "user-data" / "models"
-    monkeypatch.setattr(
-        "unipkainfer.pka_predictor.api.default_model_dir",
-        lambda: model_dir,
-    )
-
-    message = _missing_checkpoint_message(
-        model_dir / "fold_0" / "checkpoint_best.pt",
-        model_dir,
-    )
-
-    assert "`unipka-download-model`" in message
-    assert "--output-folder" not in message
+    assert downloader.main(
+        ["--output-folder", str(tmp_path / "models"), "--fold", "1", "3"]
+    ) == 0
+    assert captured == {
+        "output_folder": tmp_path / "models",
+        "folds": (1, 3),
+    }
