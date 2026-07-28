@@ -4,7 +4,6 @@ import io
 import hashlib
 import pickle
 import shutil
-import shlex
 import tempfile
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -14,6 +13,7 @@ import pandas as pd
 import torch
 
 from ..paths import default_model_dir
+from ..models import DEFAULT_FOLD, ensure_checkpoint
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -36,7 +36,7 @@ class PredictionConfig:
     results_dir: Path | None = None
     model_dir: Path = field(default_factory=default_model_dir)
     dict_dir: Path = REPO_ROOT / "unimol" / "examples"
-    fold: int = 0
+    fold: int = DEFAULT_FOLD
     batch_size: int = 16
     conf_size: int = 11
     nthreads: int = 16
@@ -136,9 +136,7 @@ def _run_inference(
     task_name: str,
     cfg: PredictionConfig,
 ) -> None:
-    checkpoint = _resolve_checkpoint(cfg.model_dir, cfg.fold)
-    if not checkpoint.exists():
-        raise FileNotFoundError(_missing_checkpoint_message(checkpoint, cfg.model_dir))
+    checkpoint = ensure_checkpoint(cfg.model_dir, cfg.fold)
 
     fold_results_dir = results_dir / f"fold_{cfg.fold}"
     input_args = [
@@ -196,28 +194,6 @@ def _run_inference(
     from ..unimol.infer import run_inference
 
     run_inference(input_args)
-
-
-def _resolve_checkpoint(model_dir: str | Path, fold: int) -> Path:
-    model_path = _resolve(model_dir)
-    if model_path.suffix == ".pt":
-        return model_path
-
-    checkpoint = model_path / "checkpoint_best.pt"
-    if checkpoint.exists():
-        return checkpoint
-
-    return model_path / f"fold_{fold}" / "checkpoint_best.pt"
-
-
-def _missing_checkpoint_message(checkpoint: Path, model_dir: str | Path) -> str:
-    destination = Path(model_dir).expanduser().resolve()
-    if destination == default_model_dir().expanduser().resolve():
-        download_command = "unipka-download-model"
-    else:
-        output_folder = shlex.quote(str(destination))
-        download_command = f"unipka-download-model --output-folder {output_folder}"
-    return f"Missing Uni-pKa checkpoint: {checkpoint}. Download the model weights with `{download_command}`."
 
 
 def _read_results(results_dir: Path, fold: int, task_name: str) -> pd.DataFrame:

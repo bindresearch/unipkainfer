@@ -22,10 +22,9 @@ from rdkit.Chem.rdchem import Mol
 from .api import (
     REPO_ROOT,
     _copy_dictionaries,
-    _missing_checkpoint_message,
     _resolve,
-    _resolve_checkpoint,
 )
+from ..models import DEFAULT_FOLD, ensure_checkpoint
 from ..paths import default_model_dir
 
 
@@ -54,7 +53,7 @@ class UnipkaFreeEnergyConfig:
     """User-configurable options for Uni-pKa free-energy inference."""
 
     model_dir: Path = field(default_factory=default_model_dir)
-    folds: tuple[int, ...] = (0,)
+    folds: tuple[int, ...] = (DEFAULT_FOLD,)
     nthreads: int = 16
     gpu: bool | None = None
 
@@ -91,9 +90,7 @@ class _FreeEnergyFoldRunner:
         fold: int,
         task_setup_dir: Path,
     ) -> "_FreeEnergyFoldRunner":
-        checkpoint = _resolve_checkpoint(cfg.model_dir, fold)
-        if not checkpoint.exists():
-            raise FileNotFoundError(_missing_checkpoint_message(checkpoint, cfg.model_dir))
+        checkpoint = ensure_checkpoint(cfg.model_dir, fold)
 
         with _suppress_unipka_extension_output():
             try:
