@@ -141,7 +141,7 @@ class _FreeEnergyFoldRunner:
         self,
         processed_dir: Path,
         task_name: str,
-        n_molecules: int,
+        smiles: Sequence[str],
     ) -> pd.DataFrame:
         self.args.data = str(processed_dir)
         self.args.task_name = task_name
@@ -171,7 +171,7 @@ class _FreeEnergyFoldRunner:
                     _, _, log_output = self.task.valid_step(sample, self.model, self.loss, test=True)
                     batches.append(log_output)
 
-        return _free_energy_results_from_batches(batches, n_molecules, UNIPKA_CONF_SIZE)
+        return _free_energy_results_from_batches(batches, smiles, UNIPKA_CONF_SIZE)
 
 
 _FoldRunnerCacheKey = tuple[Path, bool | None, int]
@@ -364,27 +364,45 @@ def _expand_unique_free_energy_predictions(
 
 def _free_energy_results_from_batches(
     batches: Sequence[dict[str, object]],
-    n_molecules: int,
+    smiles: Sequence[str],
     conf_size: int,
 ) -> pd.DataFrame:
+    molecule_indices = {smi: idx for idx, smi in enumerate(smiles)}
+    if len(molecule_indices) != len(smiles):
+        raise ValueError("Expected unique input SMILES for free-energy inference.")
+
     rows = []
-    row_idx = 0
+    conformer_counts = [0] * len(smiles)
     for batch in batches:
         predicts = batch["predict"].view(-1).cpu().numpy()
         for idx in range(batch["bsz"]):
-            molecule_idx = row_idx // conf_size
+            smi = batch["smi_name"][idx]
+            try:
+                molecule_idx = molecule_indices[smi]
+            except KeyError:
+                raise ValueError(f"Inference returned unknown SMILES {smi!r}.") from None
+
+            conformer_idx = conformer_counts[molecule_idx]
+            if conformer_idx >= conf_size:
+                raise ValueError(f"Expected {conf_size} conformers for SMILES {smi!r}, got more than {conf_size}.")
             rows.append(
                 {
                     "molecule_index": molecule_idx,
-                    "conformer_index": row_idx % conf_size,
-                    "smiles": batch["smi_name"][idx],
+                    "conformer_index": conformer_idx,
+                    "smiles": smi,
                     "conformer_free_energy": float(predicts[idx]),
                 }
             )
-            row_idx += 1
+            conformer_counts[molecule_idx] += 1
+
+    invalid_counts = {
+        smi: count for smi, count in zip(smiles, conformer_counts) if count != conf_size
+    }
+    if invalid_counts:
+        raise ValueError(f"Expected {conf_size} conformers per molecule, got {invalid_counts}.")
 
     conformer_results = pd.DataFrame(rows)
-    return _aggregate_free_energy_predictions(conformer_results, n_molecules)
+    return _aggregate_free_energy_predictions(conformer_results, len(smiles))
 
 
 def predict_standard_free_energy(
@@ -440,7 +458,7 @@ def predict_standard_free_energies(
                 fold,
                 processed_dir,
             )
-            fold_results.append(runner.predict(processed_dir, fold_task, len(unique_smiles)))
+            fold_results.append(runner.predict(processed_dir, fold_task, unique_smiles))
 
         if len(fold_results) == 1:
             unique_results = fold_results[0]

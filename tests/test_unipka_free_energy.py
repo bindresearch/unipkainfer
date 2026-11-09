@@ -13,6 +13,7 @@ from unipkainfer.pka_predictor.free_energy import (
     _aggregate_free_energy_predictions,
     _aggregate_fold_free_energy_predictions,
     _free_energy_inference_argv,
+    _free_energy_results_from_batches,
     _mol_to_unmapped_smiles,
     _smiles_to_3d_coords,
     _suppress_unipka_extension_output,
@@ -130,6 +131,62 @@ def test_aggregate_free_energy_predictions_averages_conformers_by_input_order():
     assert results["n_conformers"].tolist() == [2, 2]
 
 
+def test_free_energy_batches_match_singletons_when_inference_reorders_microstates():
+    smiles = ["C[NH3+]", "CN", "C[NH-]"]
+
+    batched = _free_energy_results_from_batches(
+        [
+            {
+                "bsz": 6,
+                "smi_name": ["CN", "CN", "C[NH-]", "C[NH-]", "C[NH3+]", "C[NH3+]"],
+                "predict": free_energy_module.torch.tensor([-8.0, -8.4, 7.4, 7.6, -0.5, -0.7]),
+            }
+        ],
+        smiles,
+        conf_size=2,
+    )
+    singleton_results = []
+    predictions = {
+        "C[NH3+]": [-0.5, -0.7],
+        "CN": [-8.0, -8.4],
+        "C[NH-]": [7.4, 7.6],
+    }
+    for smi in smiles:
+        singleton_results.append(
+            _free_energy_results_from_batches(
+                [
+                    {
+                        "bsz": 2,
+                        "smi_name": [smi, smi],
+                        "predict": free_energy_module.torch.tensor(predictions[smi]),
+                    }
+                ],
+                [smi],
+                conf_size=2,
+            )
+        )
+
+    assert batched["smiles"].tolist() == smiles
+    assert batched["standard_free_energy"].tolist() == pytest.approx(
+        [result.loc[0, "standard_free_energy"] for result in singleton_results]
+    )
+
+
+def test_free_energy_batches_require_expected_conformers_for_each_molecule():
+    with pytest.raises(ValueError, match="Expected 2 conformers per molecule"):
+        _free_energy_results_from_batches(
+            [
+                {
+                    "bsz": 2,
+                    "smi_name": ["C", "N"],
+                    "predict": free_energy_module.torch.tensor([1.0, 2.0]),
+                }
+            ],
+            ["C", "N"],
+            conf_size=2,
+        )
+
+
 def test_aggregate_fold_free_energy_predictions_averages_folds_by_input_order():
     fold_results = [
         pd.DataFrame(
@@ -224,7 +281,7 @@ def test_predict_standard_free_energies_runs_only_configured_default_fold(monkey
         def __init__(self, fold):
             self.fold = fold
 
-        def predict(self, processed_dir, task_name, n_molecules):
+        def predict(self, processed_dir, task_name, smiles):
             predicted_folds.append(self.fold)
             return pd.DataFrame(
                 {
@@ -267,8 +324,8 @@ def test_predict_standard_free_energies_deduplicates_smiles_and_reuses_runner(mo
         write_calls.append((tuple(smiles), task_name, processed_dir))
 
     class FakeRunner:
-        def predict(self, processed_dir, task_name, n_molecules):
-            runner_predict_calls.append((processed_dir, task_name, n_molecules))
+        def predict(self, processed_dir, task_name, smiles):
+            runner_predict_calls.append((processed_dir, task_name, tuple(smiles)))
             return pd.DataFrame(
                 {
                     "molecule_index": [0, 1],
@@ -308,7 +365,7 @@ def test_predict_standard_free_energies_deduplicates_smiles_and_reuses_runner(mo
     assert runner_predict_calls[0][1] == write_calls[0][1]
     assert runner_predict_calls[1][1] == write_calls[1][1]
     assert len(runner_load_calls) == 1
-    assert [call[2] for call in runner_predict_calls] == [2, 2]
+    assert [call[2] for call in runner_predict_calls] == [("C", "N"), ("C", "N")]
     assert results["molecule_index"].tolist() == [0, 1, 2]
     assert results["smiles"].tolist() == ["C", "N", "C"]
     assert results["standard_free_energy"].tolist() == [1.0, 2.0, 1.0]
@@ -332,7 +389,7 @@ def test_predict_standard_free_energies_runs_and_averages_five_cached_folds(monk
         def __init__(self, fold):
             self.fold = fold
 
-        def predict(self, processed_dir, task_name, n_molecules):
+        def predict(self, processed_dir, task_name, smiles):
             runner_predict_folds.append(self.fold)
             runner_task_names.append(task_name)
             return pd.DataFrame(
@@ -382,7 +439,7 @@ def test_changing_selected_folds_reuses_loaded_fold_and_isolates_lmdb_paths(monk
         def __init__(self, fold):
             self.fold = fold
 
-        def predict(self, processed_dir, task_name, n_molecules):
+        def predict(self, processed_dir, task_name, smiles):
             predicted.append((self.fold, processed_dir / task_name / "valid.lmdb"))
             return pd.DataFrame(
                 {
