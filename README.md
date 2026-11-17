@@ -12,6 +12,12 @@ derived from [Uni-Mol](https://github.com/deepmodeling/Uni-Mol) and
 license notices are preserved in the accompanying license and
 third-party notice files.
 
+The Uni-pKa models distributed with unipkainfer were trained using data from:
+
+*Jonathan Zheng, & Lafontant-Joseph, O. (2026). IUPAC/Dissociation-Constants: v2.3d (Versions v2-3d) [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.19112621* (CC BY-NC 4.0 Licence).
+
+Commercial use of the model weights is not authorised without additional permission from the relevant rights holders.
+
 ## Installation
 
 ```bash
