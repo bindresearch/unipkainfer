@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -49,8 +50,19 @@ def ensure_checkpoint(
 ) -> Path:
     """Return a verified local checkpoint, downloading it when necessary."""
 
+    name = _checkpoint_name(fold)
+    if not (Path(model_dir).expanduser().resolve() / name).is_file():
+        logging.getLogger(__name__).warning(
+            "Uni-pKa model weights were trained using the IUPAC Dissociation "
+            "Constants dataset (CC BY-NC 4.0): "
+            "https://doi.org/10.5281/zenodo.19112621. "
+            "Commercial use of these weights requires additional permission "
+            "from the relevant rights holders. This applies to both "
+            "pKasso(Uni-pKa) and pKasso(mixed)."
+        )
+
     checkpoint = _model_manager(model_dir).fetch(
-        _checkpoint_name(fold),
+        name,
         progressbar=progressbar,
     )
     return Path(checkpoint)
